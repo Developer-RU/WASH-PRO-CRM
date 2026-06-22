@@ -1,8 +1,36 @@
-# WASH PHO CRM / SCADA
+<p align="center">
+  <img src="docs/assets/banner.png" alt="WASH PHO CRM / SCADA" width="100%">
+</p>
 
-Локальная CRM/SCADA-система для автомоек самообслуживания на базе [Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform).
+<p align="center">
+  <a href="https://github.com/Developer-RU/WASH-PHO-CRM/actions/workflows/pages.yml"><img src="https://github.com/Developer-RU/WASH-PHO-CRM/actions/workflows/pages.yml/badge.svg" alt="GitHub Pages"></a>
+  <a href="https://developer-ru.github.io/WASH-PHO-CRM/"><img src="https://img.shields.io/badge/Docs-GitHub_Pages-14b8a6?style=flat-square&logo=github&logoColor=white" alt="Documentation"></a>
+  <img src="https://img.shields.io/badge/version-1.0.0-0d9488?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/MongoDB-7-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB">
+  <img src="https://img.shields.io/badge/RabbitMQ-Telemetry-FF6600?style=flat-square&logo=rabbitmq&logoColor=white" alt="RabbitMQ">
+  <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform"><img src="https://img.shields.io/badge/Dynamic_API-Platform-3b82f6?style=flat-square" alt="Dynamic API Platform"></a>
+  <img src="https://img.shields.io/badge/License-Proprietary-red?style=flat-square" alt="License">
+</p>
 
-📖 **[Документация](https://Developer-RU.github.io/WASH-PHO-CRM/)** · [Быстрый старт](docs/getting-started.md) · [Архитектура](docs/architecture.md)
+<p align="center">
+  Локальная CRM/SCADA-система для автомоек самообслуживания на базе
+  <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform">Dynamic API Platform</a>
+</p>
+
+<p align="center">
+  <a href="https://developer-ru.github.io/WASH-PHO-CRM/"><strong>Документация</strong></a>
+  ·
+  <a href="docs/getting-started.md">Быстрый старт</a>
+  ·
+  <a href="docs/architecture.md">Архитектура</a>
+  ·
+  <a href="https://github.com/Developer-RU/WASH-PHO-CRM/issues">Issues</a>
+</p>
+
+---
 
 ## Возможности
 

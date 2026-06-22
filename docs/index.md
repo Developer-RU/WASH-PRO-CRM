@@ -2,6 +2,8 @@
 layout: default
 ---
 
+<img class="banner" src="{{ '/assets/banner.png' | relative_url }}" alt="WASH PHO CRM / SCADA">
+
 <span class="hero-badge">CRM / SCADA для автомоек</span>
 
 **Локальная система управления автомойками самообслуживания** — мониторинг постов, карты клиентов, статистика, финансы, резервное копирование и Telegram-уведомления.
