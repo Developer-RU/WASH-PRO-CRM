@@ -244,6 +244,51 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
   margin-bottom: 1rem;
 }
 
+.hero {
+  margin: -0.5rem 0 1.75rem;
+}
+
+.content .banner {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  display: block;
+  margin: 0 0 1rem;
+}
+
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+}
+
+.hero-badges a {
+  line-height: 0;
+  text-decoration: none;
+}
+
+.hero-badges img {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+
+.hero-lead {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.hero-lead a {
+  color: var(--primary);
+}
+
 .quick-links {
   text-align: center;
   margin: 1.25rem 0;
@@ -362,6 +407,14 @@ body.nav-open .menu-toggle-bar:nth-child(3) {
   .site-footer {
     padding: 1rem 1rem 2rem;
     max-width: 100%;
+  }
+
+  .hero-badges img {
+    height: 20px;
+  }
+
+  .content .banner {
+    border-radius: 8px;
   }
 
   .table-scroll th,

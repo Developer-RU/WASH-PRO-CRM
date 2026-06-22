@@ -2,9 +2,14 @@
 layout: default
 ---
 
-<img class="banner" src="{{ '/assets/banner.png' | relative_url }}" alt="WASH PHO CRM / SCADA">
-
-<span class="hero-badge">CRM / SCADA для автомоек</span>
+<div class="hero">
+  <img class="banner" src="{{ '/assets/banner.png' | relative_url }}" alt="WASH PHO CRM / SCADA">
+  {% include hero-badges.html %}
+  <p class="hero-lead">
+    Локальная CRM/SCADA-система для автомоек самообслуживания на базе
+    <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform">Dynamic API Platform</a>
+  </p>
+</div>
 
 **Локальная система управления автомойками самообслуживания** — мониторинг постов, карты клиентов, статистика, финансы, резервное копирование и Telegram-уведомления.
 
