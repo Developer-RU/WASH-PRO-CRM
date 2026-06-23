@@ -1,4 +1,4 @@
-Full guide: [Configuration](https://dynamic-api-platform.github.io/Dynamic-API-Platform/configuration/)
+Full guide: [Configuration](https://developer-ru.github.io/Dynamic-API-Platform/configuration/)
 
 Copy `.env.example` to `.env`.
 

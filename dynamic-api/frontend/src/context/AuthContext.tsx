@@ -16,14 +16,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const unsubscribe = api.onUnauthorized(() => setUser(null));
+
     if (api.isAuthenticated) {
       api.getProfile()
         .then((profile) => setUser(profile as User))
-        .catch(() => api.clearTokens())
+        .catch(() => {
+          api.clearTokens();
+          setUser(null);
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
+
+    return unsubscribe;
   }, []);
 
   const login = async (loginStr: string, password: string) => {

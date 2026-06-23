@@ -16,7 +16,7 @@ title: Development
 ## Setup
 
 ```bash
-git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
+git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 
 # Start MongoDB only
@@ -113,4 +113,4 @@ See [Troubleshooting](troubleshooting.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/CONTRIBUTING.md) on GitHub.
+See [CONTRIBUTING.md](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/CONTRIBUTING.md) on GitHub.

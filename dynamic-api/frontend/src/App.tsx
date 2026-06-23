@@ -12,6 +12,7 @@ import EndpointGroupsPage from './pages/EndpointGroupsPage';
 import SystemPage from './pages/SystemPage';
 import SettingsPage from './pages/SettingsPage';
 import LogsPage from './pages/LogsPage';
+import DatabasePage from './pages/DatabasePage';
 import { LoadingSpinner } from './components/UI';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -49,6 +50,7 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/system" element={<ProtectedRoute><SystemPage /></ProtectedRoute>} />
       <Route path="/logs" element={<ProtectedRoute><LogsPage /></ProtectedRoute>} />
+      <Route path="/database" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

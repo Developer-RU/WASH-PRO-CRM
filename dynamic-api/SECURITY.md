@@ -12,7 +12,7 @@
 
 If you discover a security issue, please report it privately:
 
-1. Open a [GitHub Security Advisory](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/security/advisories/new), **or**
+1. Open a [GitHub Security Advisory](https://github.com/Developer-RU/Dynamic-API-Platform/security/advisories/new), **or**
 2. Email the maintainer via GitHub profile contact
 
 Include:

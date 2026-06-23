@@ -154,7 +154,7 @@ export default function UsersPage() {
       )}
 
       <Modal open={modalOpen} onClose={closeModal} title={editingId ? 'Edit User' : 'Create User'}>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label className="block text-sm font-medium mb-1">Name</label>
             <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -166,7 +166,15 @@ export default function UsersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Email</label>
-              <input type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              <input
+                type="text"
+                inputMode="email"
+                autoComplete="email"
+                className="input"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
             </div>
           </div>
           <div>

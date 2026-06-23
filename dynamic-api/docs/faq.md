@@ -25,7 +25,7 @@ Version 1.0 is functional for small-to-medium deployments. For production:
 - Change all default secrets
 - Use HTTPS
 - Don't expose MongoDB publicly
-- Review [Security Policy](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/SECURITY.md)
+- Review [Security Policy](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/SECURITY.md)
 
 ---
 
@@ -134,4 +134,4 @@ Apache License 2.0 — free for commercial and personal use.
 
 ### How to contribute?
 
-See [CONTRIBUTING.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/CONTRIBUTING.md).

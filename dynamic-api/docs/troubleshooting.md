@@ -169,5 +169,5 @@ cd frontend && rm -rf dist node_modules && npm install && npm run build
 ## Getting help
 
 1. Check [FAQ](faq.md)
-2. Search [GitHub Issues](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/issues)
+2. Search [GitHub Issues](https://github.com/Developer-RU/Dynamic-API-Platform/issues)
 3. Open a new issue with logs and reproduction steps (no secrets!)

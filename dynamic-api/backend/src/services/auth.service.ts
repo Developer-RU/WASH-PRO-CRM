@@ -3,6 +3,29 @@ import { userRepository, groupRepository, logRepository } from '../repositories'
 import { hashPassword, comparePassword, signToken, verifyToken, sanitizeUser, getClientIp } from '../utils';
 import { JwtPayload, Permission } from '../types';
 import { LoginDto, RegisterDto } from '../dto';
+import { IGroup, IUser } from '../models';
+
+function isPopulatedGroup(groupId: unknown): groupId is IGroup {
+  return typeof groupId === 'object' && groupId !== null && 'permissions' in groupId && 'name' in groupId;
+}
+
+function normalizeGroupId(groupId: unknown): string {
+  if (isPopulatedGroup(groupId)) {
+    return groupId._id.toString();
+  }
+  return String(groupId);
+}
+
+function resolveUserPermissions(user: IUser, groups: IGroup[]): Permission[] {
+  const groupIds = user.groupIds as unknown[];
+  if (groupIds.length > 0 && isPopulatedGroup(groupIds[0])) {
+    return [...new Set(groupIds.filter(isPopulatedGroup).flatMap((group) => group.permissions))] as Permission[];
+  }
+
+  const userGroupIds = new Set(groupIds.map(normalizeGroupId));
+  const userGroups = groups.filter((group) => userGroupIds.has(group._id.toString()));
+  return [...new Set(userGroups.flatMap((group) => group.permissions))] as Permission[];
+}
 
 export class AuthService {
   async login(dto: LoginDto, req: { ip?: string; headers: Record<string, unknown> }) {
@@ -14,17 +37,13 @@ export class AuthService {
     if (!valid) throw new Error('Invalid credentials');
 
     const groups = await groupRepository.findAll();
-    const userGroups = groups.filter((g) =>
-      user.groupIds.some((id) => id.toString() === g._id.toString())
-    );
-
-    const permissions = [...new Set(userGroups.flatMap((g) => g.permissions))] as Permission[];
+    const permissions = resolveUserPermissions(user, groups);
 
     const payload: JwtPayload = {
       userId: user._id.toString(),
       login: user.login,
       email: user.email,
-      groupIds: user.groupIds.map((id) => id.toString()),
+      groupIds: user.groupIds.map(normalizeGroupId),
       permissions,
     };
 
@@ -86,16 +105,13 @@ export class AuthService {
     if (!user || user.refreshToken !== refreshToken) throw new Error('Invalid refresh token');
 
     const groups = await groupRepository.findAll();
-    const userGroups = groups.filter((g) =>
-      user.groupIds.some((id) => id.toString() === g._id.toString())
-    );
-    const permissions = [...new Set(userGroups.flatMap((g) => g.permissions))] as Permission[];
+    const permissions = resolveUserPermissions(user, groups);
 
     const payload: JwtPayload = {
       userId: user._id.toString(),
       login: user.login,
       email: user.email,
-      groupIds: user.groupIds.map((id) => id.toString()),
+      groupIds: user.groupIds.map(normalizeGroupId),
       permissions,
     };
 

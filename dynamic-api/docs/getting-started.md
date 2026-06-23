@@ -15,7 +15,7 @@ title: Getting Started
 
 ```bash
 # Clone repository
-git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
+git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 
 # Optional: copy and edit environment variables
@@ -141,9 +141,9 @@ Details: [Dynamic API Engine — References]({{ '/dynamic-api-engine/' | relativ
 
 ## Interface preview
 
-![Login page](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/login.png)
+![Login page](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/login.png)
 
-![Dashboard](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/dashboard.png)
 
 [Full screenshot gallery →]({{ '/screenshots/' | relative_url }})
 

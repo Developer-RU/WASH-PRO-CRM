@@ -4,15 +4,15 @@
   "description": "Create, manage and test dynamic REST APIs without writing backend code",
   "private": true,
   "license": "Apache-2.0",
-  "author": "Dynamic API Platform",
+  "author": "Developer-RU",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git"
+    "url": "https://github.com/Developer-RU/Dynamic-API-Platform.git"
   },
   "bugs": {
-    "url": "https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/issues"
+    "url": "https://github.com/Developer-RU/Dynamic-API-Platform/issues"
   },
-  "homepage": "https://dynamic-api-platform.github.io/Dynamic-API-Platform/",
+  "homepage": "https://developer-ru.github.io/Dynamic-API-Platform/",
   "keywords": [
     "dynamic-api",
     "rest-api",

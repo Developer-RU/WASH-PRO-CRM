@@ -14,11 +14,18 @@ export type FieldType =
   | 'object'
   | 'array'
   | 'datetime'
-  | 'json';
+  | 'json'
+  | 'reference';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export type AccessType = 'public' | 'authenticated' | 'group';
+
+export interface NetworkAccessRules {
+  enabled: boolean;
+  allowedDomains: string[];
+  allowedIpRanges: string[];
+}
 
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 
@@ -43,6 +50,7 @@ export interface SchemaField {
   defaultValue?: unknown;
   order: number;
   children?: SchemaField[];
+  refEndpointId?: string;
 }
 
 export interface EndpointHandler {

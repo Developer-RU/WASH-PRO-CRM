@@ -11,31 +11,31 @@ Screenshots of **Dynamic API Platform v1.0** running at `http://localhost:8080`.
 
 ## Login
 
-![Login page](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/login.png)
+![Login page](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/login.png)
 
 **URL:** `/login` · **Default:** `admin` / `Admin123!`
 
 ## Dashboard
 
-![Dashboard](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/dashboard.png)
 
 **URL:** `/` — stats, charts, user activity
 
 ## Endpoints
 
-![Endpoints](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/endpoints.png)
+![Endpoints](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/endpoints.png)
 
 **URL:** `/endpoints` — grouped tables, search, filters
 
 ## Settings
 
-![Settings](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/settings.png)
+![Settings](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/settings.png)
 
 **URL:** `/settings` — auth, rate limits, logs, pagination
 
 ## System
 
-![System](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/system.png)
+![System](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/system.png)
 
 **URL:** `/system` — CPU, memory, disk, network
 

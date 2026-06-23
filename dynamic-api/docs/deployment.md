@@ -12,7 +12,7 @@ title: Deployment
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
+git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 cp .env.example .env
 
