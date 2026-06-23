@@ -7,14 +7,114 @@ import {
 import {
   normalizePath,
   validateDataAgainstSchema,
+  validateReferences,
   applyDefaults,
   generateExamples,
   matchDynamicPath,
-  matchesEndpointResourcePath,
+  getCollectionPath,
+  normalizeNetworkAccessInput,
+  validateNetworkAccessInput,
+  resolveEffectiveNetworkAccess,
+  checkNetworkAccess,
 } from '../utils';
 import { CreateEndpointDto, UpdateEndpointDto, CreateEndpointGroupDto, UpdateEndpointGroupDto, TestEndpointDto } from '../dto';
 import { IEndpoint } from '../models';
-import { JwtPayload, HttpMethod, TestEndpointResult } from '../types';
+import { JwtPayload, HttpMethod, TestEndpointResult, Permission, SchemaField, NetworkAccessRules } from '../types';
+import { authService } from './auth.service';
+import { userService, groupService } from './user.service';
+
+function assertAnyPermission(user: JwtPayload | undefined, ...permissions: Permission[]): asserts user is JwtPayload {
+  if (!user) throw new Error('Unauthorized');
+  if (!permissions.some((permission) => user.permissions.includes(permission))) {
+    throw new Error('Forbidden: insufficient permissions');
+  }
+}
+
+function parseNetworkAccessInput(input?: Partial<NetworkAccessRules> | null): NetworkAccessRules {
+  const normalized = normalizeNetworkAccessInput(input);
+  const errors = validateNetworkAccessInput(normalized);
+  if (errors.length) throw new Error(errors.join('; '));
+  return normalized;
+}
+
+async function executeSystemEndpoint(
+  endpoint: IEndpoint,
+  req: {
+    method: string;
+    path: string;
+    body?: unknown;
+    params?: Record<string, string>;
+    query?: Record<string, string>;
+    user?: JwtPayload;
+    headers?: Record<string, string>;
+  }
+): Promise<unknown> {
+  const path = normalizePath(req.path);
+  const method = req.method.toUpperCase();
+  const body = (req.body || {}) as Record<string, unknown>;
+
+  if (endpoint.accessType === 'public') {
+    switch (`${method} ${path}`) {
+      case 'POST /api/auth/login':
+        return {
+          success: true,
+          data: await authService.login(
+            { login: String(body.login || ''), password: String(body.password || '') },
+            { headers: req.headers || {} }
+          ),
+        };
+      case 'POST /api/auth/refresh':
+        return {
+          success: true,
+          data: await authService.refresh(String(body.refreshToken || '')),
+        };
+      case 'POST /api/auth/register':
+        return {
+          success: true,
+          data: await authService.register(
+            {
+              login: String(body.login || ''),
+              email: String(body.email || ''),
+              password: String(body.password || ''),
+              name: String(body.name || ''),
+            },
+            { headers: req.headers || {} }
+          ),
+        };
+      default:
+        break;
+    }
+  }
+
+  if (endpoint.accessType === 'authenticated' && !req.user) {
+    throw new Error('Unauthorized');
+  }
+
+  switch (`${method} ${path}`) {
+    case 'GET /api/users': {
+      assertAnyPermission(req.user, 'manage_users', 'view');
+      const page = parseInt(String(req.query?.page || '1'), 10);
+      const limit = parseInt(String(req.query?.limit || '20'), 10);
+      const search = typeof req.query?.search === 'string' ? req.query.search : undefined;
+      return { success: true, data: await userService.getAll(page, limit, search) };
+    }
+    case 'GET /api/groups': {
+      assertAnyPermission(req.user, 'manage_users', 'view');
+      return { success: true, data: await groupService.getAll() };
+    }
+    case 'GET /api/profile': {
+      if (!req.user) throw new Error('Unauthorized');
+      return { success: true, data: await userService.getProfile(req.user.userId) };
+    }
+    case 'POST /api/auth/logout': {
+      if (!req.user) throw new Error('Unauthorized');
+      await authService.logout(req.user.userId, { headers: req.headers || {} });
+      return { success: true, message: 'Logged out successfully' };
+    }
+    default:
+      throw new Error('System endpoint test is not supported for this path');
+  }
+}
 
 export class EndpointService {
   async getAll(page = 1, limit = 50) {
@@ -49,9 +149,12 @@ export class EndpointService {
         defaultValue: f.defaultValue,
         order: f.order ?? i,
         children: f.children as import('../types').SchemaField[] | undefined,
+        refEndpointId: f.refEndpointId,
       })),
       accessType: (dto.accessType as import('../types').AccessType) || 'authenticated',
       allowedGroupIds: (dto.allowedGroupIds || []) as unknown as import('mongoose').Types.ObjectId[],
+      networkAccess: dto.networkAccess ? parseNetworkAccessInput(dto.networkAccess) : undefined,
+      inheritGroupNetworkAccess: dto.inheritGroupNetworkAccess ?? true,
       handlers: (dto.handlers || []).map((h) => ({
         name: h.name,
         type: h.type as 'pre' | 'post' | 'transform',
@@ -88,6 +191,8 @@ export class EndpointService {
     if (dto.accessType !== undefined) updateData.accessType = dto.accessType;
     if (dto.allowedGroupIds !== undefined) updateData.allowedGroupIds = dto.allowedGroupIds;
     if (dto.enabled !== undefined) updateData.enabled = dto.enabled;
+    if (dto.networkAccess !== undefined) updateData.networkAccess = parseNetworkAccessInput(dto.networkAccess);
+    if (dto.inheritGroupNetworkAccess !== undefined) updateData.inheritGroupNetworkAccess = dto.inheritGroupNetworkAccess;
 
     if (dto.schema !== undefined) {
       updateData.fields = dto.schema.map((f, i) => ({
@@ -98,6 +203,7 @@ export class EndpointService {
         defaultValue: f.defaultValue,
         order: f.order ?? i,
         children: f.children,
+        refEndpointId: f.refEndpointId,
       }));
     }
 
@@ -176,7 +282,15 @@ export class EndpointService {
     };
 
     try {
-      const result = await dynamicEngine.execute(endpoint, mockReq);
+      const result = endpoint.isSystem
+        ? await executeSystemEndpoint(endpoint, mockReq)
+        : await dynamicEngine.execute(endpoint, mockReq, {
+            skipNetworkCheck: dto.applyNetworkAccess !== true,
+            networkMeta: {
+              ip: dto.clientIp,
+              headers: dto.headers,
+            },
+          });
       const responseTime = Date.now() - startTime;
 
       return {
@@ -224,13 +338,23 @@ export class EndpointGroupService {
   }
 
   async create(dto: CreateEndpointGroupDto) {
-    return endpointGroupRepository.create(dto);
+    const { networkAccess, ...rest } = dto;
+    const payload: Partial<import('../models').IEndpointGroup> = { ...rest };
+    if (networkAccess !== undefined) {
+      payload.networkAccess = parseNetworkAccessInput(networkAccess);
+    }
+    return endpointGroupRepository.create(payload);
   }
 
   async update(id: string, dto: UpdateEndpointGroupDto) {
     const group = await endpointGroupRepository.findById(id);
     if (!group) throw new Error('Endpoint group not found');
-    return endpointGroupRepository.update(id, dto);
+    const { networkAccess, ...rest } = dto;
+    const payload: Partial<import('../models').IEndpointGroup> = { ...rest };
+    if (networkAccess !== undefined) {
+      payload.networkAccess = parseNetworkAccessInput(networkAccess);
+    }
+    return endpointGroupRepository.update(id, payload);
   }
 
   async delete(id: string) {
@@ -270,6 +394,68 @@ export class DynamicEngine {
     }
   }
 
+  private async assertNetworkAccess(
+    endpoint: IEndpoint,
+    meta?: { ip?: string; headers?: Record<string, string | string[] | undefined> },
+    skip = false
+  ): Promise<void> {
+    if (skip) return;
+
+    let group = null;
+    if (endpoint.groupId) {
+      const groupId =
+        typeof endpoint.groupId === 'object' && endpoint.groupId !== null && '_id' in endpoint.groupId
+          ? String((endpoint.groupId as { _id: unknown })._id)
+          : String(endpoint.groupId);
+      group = await endpointGroupRepository.findById(groupId);
+    }
+
+    const rules = resolveEffectiveNetworkAccess(endpoint, group);
+    if (!rules) return;
+
+    const result = checkNetworkAccess(rules, { ip: meta?.ip, headers: meta?.headers });
+    if (!result.allowed) {
+      throw new Error(result.reason || 'Forbidden: network access denied');
+    }
+  }
+
+  private async assertReferences(data: Record<string, unknown>, fields: SchemaField[]): Promise<void> {
+    const refs = await validateReferences(
+      data,
+      fields,
+      (id) => endpointRepository.findById(id),
+      (id) => endpointDataRepository.findById(id)
+    );
+    if (!refs.valid) throw new Error(refs.errors.join(', '));
+  }
+
+  private async populateReferences(
+    data: Record<string, unknown>,
+    fields: SchemaField[],
+    populateQuery?: string
+  ): Promise<Record<string, unknown>> {
+    if (!populateQuery) return data;
+
+    const populateAll = populateQuery === 'true' || populateQuery === '1';
+    const selected = populateAll
+      ? fields.filter((field) => field.type === 'reference').map((field) => field.name)
+      : populateQuery.split(',').map((name) => name.trim()).filter(Boolean);
+
+    const result = { ...data };
+    for (const field of fields) {
+      if (field.type !== 'reference' || !selected.includes(field.name)) continue;
+      const value = result[field.name];
+      if (typeof value !== 'string') continue;
+
+      const refRecord = await endpointDataRepository.findById(value);
+      if (refRecord) {
+        result[field.name] = { id: refRecord._id, ...refRecord.data };
+      }
+    }
+
+    return result;
+  }
+
   async execute(
     endpoint: IEndpoint,
     req: {
@@ -279,30 +465,47 @@ export class DynamicEngine {
       params?: Record<string, string>;
       query?: Record<string, string>;
       user?: JwtPayload;
+    },
+    options?: {
+      skipNetworkCheck?: boolean;
+      networkMeta?: { ip?: string; headers?: Record<string, string | string[] | undefined> };
     }
   ): Promise<unknown> {
+    await this.assertNetworkAccess(endpoint, options?.networkMeta, options?.skipNetworkCheck);
     this.checkAccess(endpoint, req.user);
 
     const params = req.params || {};
     const hasIdParam = Object.keys(params).length > 0;
     const idParam = params.id || Object.values(params)[0];
+    const collectionPath = getCollectionPath(endpoint.path);
+    const populate = req.query?.populate;
 
     switch (endpoint.method) {
       case 'GET':
         if (hasIdParam && idParam) {
           const record = await endpointDataRepository.findById(idParam);
-          if (!record || !matchesEndpointResourcePath(record.resourcePath, endpoint.path)) {
+          if (!record || record.resourcePath !== collectionPath) {
             throw new Error('Record not found');
           }
-          return { success: true, data: { id: record._id, ...record.data } };
+          const data = await this.populateReferences(
+            { id: record._id, ...record.data },
+            endpoint.fields,
+            populate
+          );
+          return { success: true, data };
         }
         {
           const page = parseInt(String(req.query?.page || '1'), 10);
           const limit = parseInt(String(req.query?.limit || '20'), 10);
-          const result = await endpointDataRepository.findByPath(endpoint.path, page, limit);
+          const result = await endpointDataRepository.findByPath(collectionPath, page, limit);
+          const data = await Promise.all(
+            result.data.map((item) =>
+              this.populateReferences({ id: item._id, ...item.data }, endpoint.fields, populate)
+            )
+          );
           return {
             success: true,
-            data: result.data.map((d) => ({ id: d._id, ...d.data })),
+            data,
             pagination: { total: result.total, page: result.page, limit: result.limit, totalPages: result.totalPages },
           };
         }
@@ -313,7 +516,8 @@ export class DynamicEngine {
         if (!validation.valid) throw new Error(validation.errors.join(', '));
 
         const data = applyDefaults(body, endpoint.fields);
-        const record = await endpointDataRepository.create(endpoint._id.toString(), endpoint.path, data);
+        await this.assertReferences(data, endpoint.fields);
+        const record = await endpointDataRepository.create(endpoint._id.toString(), collectionPath, data);
         return { success: true, data: { id: record._id, ...record.data } };
       }
 
@@ -321,7 +525,7 @@ export class DynamicEngine {
       case 'PATCH': {
         if (!idParam) throw new Error('ID parameter required for update');
         const existing = await endpointDataRepository.findById(idParam);
-        if (!existing || !matchesEndpointResourcePath(existing.resourcePath, endpoint.path)) {
+        if (!existing || existing.resourcePath !== collectionPath) {
           throw new Error('Record not found');
         }
 
@@ -333,6 +537,7 @@ export class DynamicEngine {
         const validation = validateDataAgainstSchema(merged as Record<string, unknown>, endpoint.fields);
         if (!validation.valid) throw new Error(validation.errors.join(', '));
 
+        await this.assertReferences(merged as Record<string, unknown>, endpoint.fields);
         const updated = await endpointDataRepository.update(idParam, merged as Record<string, unknown>);
         return { success: true, data: { id: updated!._id, ...updated!.data } };
       }
@@ -340,7 +545,7 @@ export class DynamicEngine {
       case 'DELETE': {
         if (!idParam) throw new Error('ID parameter required for delete');
         const existing = await endpointDataRepository.findById(idParam);
-        if (!existing || !matchesEndpointResourcePath(existing.resourcePath, endpoint.path)) {
+        if (!existing || existing.resourcePath !== collectionPath) {
           throw new Error('Record not found');
         }
         await endpointDataRepository.delete(idParam);
@@ -358,7 +563,7 @@ export class DynamicEngine {
     body: unknown,
     query: Record<string, string>,
     user?: JwtPayload,
-    meta?: { ip?: string; userAgent?: string }
+    meta?: { ip?: string; userAgent?: string; headers?: Record<string, string | string[] | undefined> }
   ): Promise<{ statusCode: number; body: unknown }> {
     const startTime = Date.now();
     const match = await this.findMatchingEndpoint(requestPath, method);
@@ -377,6 +582,8 @@ export class DynamicEngine {
         params,
         query,
         user,
+      }, {
+        networkMeta: { ip: meta?.ip, headers: meta?.headers },
       });
 
       await endpointRepository.incrementCallCount(endpoint._id.toString());

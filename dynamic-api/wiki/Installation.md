@@ -1,7 +1,7 @@
 ## Docker (recommended)
 
 ```bash
-git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
+git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 cp .env.example .env
 docker compose up -d
@@ -29,4 +29,4 @@ cd backend && npm install && npm run dev
 cd frontend && npm install && npm run dev
 ```
 
-See full guide: [docs/getting-started.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/docs/getting-started.md)
+See full guide: [docs/getting-started.md](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/docs/getting-started.md)

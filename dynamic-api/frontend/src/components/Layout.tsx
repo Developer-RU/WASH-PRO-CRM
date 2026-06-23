@@ -2,13 +2,29 @@ import { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Shield, Globe, FileText,
-  LogOut, Sun, Moon, Zap, Menu, X, Server, Folders, Settings,
+  LogOut, Sun, Moon, Zap, Menu, X, Server, Folders, Settings, Database,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useState } from 'react';
+import { userHasPermission } from '../utils/permissions';
 
-const navSections = [
+type NavItem = {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  permission?: string;
+};
+
+const adminItems: NavItem[] = [
+  { to: '/users', icon: Users, label: 'Users' },
+  { to: '/groups', icon: Shield, label: 'User Groups' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/logs', icon: FileText, label: 'Logs' },
+  { to: '/database', icon: Database, label: 'Database', permission: 'manage_users' },
+];
+
+const navSections: { label: string; items: NavItem[] }[] = [
   {
     label: 'Overview',
     items: [
@@ -25,12 +41,7 @@ const navSections = [
   },
   {
     label: 'Administration',
-    items: [
-      { to: '/users', icon: Users, label: 'Users' },
-      { to: '/groups', icon: Shield, label: 'User Groups' },
-      { to: '/settings', icon: Settings, label: 'Settings' },
-      { to: '/logs', icon: FileText, label: 'Logs' },
-    ],
+    items: adminItems,
   },
 ];
 
@@ -64,7 +75,9 @@ export default function Layout({ children }: { children: ReactNode }) {
             <div key={section.label} className="mb-4">
               <p className="nav-section-label">{section.label}</p>
               <div className="space-y-0.5">
-                {section.items.map((item) => (
+                {section.items
+                  .filter((item) => !item.permission || userHasPermission(user, item.permission))
+                  .map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}

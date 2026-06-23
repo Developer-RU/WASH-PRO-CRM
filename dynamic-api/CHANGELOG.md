@@ -7,11 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- License changed from MIT to Apache License 2.0
+### Added
+
+- **`reference` schema field type** — link records between endpoints (foreign keys)
+  - Target endpoint selector in the schema editor (**Linked endpoint**)
+  - Validation on create/update: referenced record must exist in the target collection
+  - **`?populate=true`** or **`?populate=fieldName`** on GET requests to embed linked records
+- **Database Explorer** — admin UI (`/database`) and REST API (`/api/database/*`) for raw MongoDB access
+  - Whitelisted collections: users, groups, endpoints, endpointgroups, endpointdatas, logs, systemsettings
+  - View, create, edit, delete documents as JSON; search and pagination
+  - Requires `manage_users`; sensitive user fields redacted; changes audit-logged
+- **Network access rules** — restrict dynamic endpoints by allowed **domains** and **IP/CIDR pools**
+  - Configurable on **endpoint groups** and individual **endpoints** (Network Access tab/section)
+  - Group inheritance with merged rules; enforced at runtime before JWT access-type checks
+  - Admin tester can simulate client IP and `Origin` header
+- Documentation: zero-downtime API creation (no server restart on new routes), comparison with Strapi/Directus
+- Session handling: centralized `UnauthorizedError` and auth state sync on token expiry
 
 ### Fixed
+
+- **Session expiry UX** — expired or invalid tokens redirect to `/login` instead of showing "Failed to load dashboard"
+- **JWT refresh bug** — access tokens issued after refresh had empty `permissions` when user groups were populated from MongoDB
+- **System endpoint tester** — built-in test for `/api/users`, `/api/groups`, `/api/profile` now calls real management APIs with RBAC (was incorrectly routed through the dynamic engine with `Forbidden: insufficient group permissions`)
+- **Dynamic engine** — GET/PUT/DELETE on paths with parameters (e.g. `/api/products/:id`) now resolve records using the collection base path
 - Broken images in `docs/screenshots.md` on GitHub (use raw.githubusercontent.com URLs)
+
+### Changed
+
+- License changed from MIT to **Apache License 2.0**
+- System endpoints **List Users** and **List Groups**: `accessType` set to `authenticated` (documented as management API; RBAC enforced on the real route)
+- Seed migration: existing system endpoints get updated `accessType` and descriptions on backend startup
+
+### Planned
+
+- OpenAPI/Swagger export for dynamic endpoints
+- Webhook notifications on endpoint events
+- Multi-tenant workspace support
+- Endpoint versioning
 
 ## [1.0.0] - 2026-06-18
 
@@ -83,14 +115,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Default endpoint groups
 - CRM, SHOP, DEVICES
 
----
-
-## [Unreleased]
-
-### Planned
-- OpenAPI/Swagger export for dynamic endpoints
-- Webhook notifications on endpoint events
-- Multi-tenant workspace support
-- Endpoint versioning
-
-[1.0.0]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.0.0
+[1.0.0]: https://github.com/Developer-RU/Dynamic-API-Platform/releases/tag/v1.0.0

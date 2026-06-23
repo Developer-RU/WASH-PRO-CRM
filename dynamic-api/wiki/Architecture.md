@@ -1,4 +1,4 @@
-See full documentation: [Architecture](https://dynamic-api-platform.github.io/Dynamic-API-Platform/architecture/)
+See full documentation: [Architecture](https://developer-ru.github.io/Dynamic-API-Platform/architecture/)
 
 ## Stack
 
@@ -15,10 +15,29 @@ Routes → Services → Repositories → MongoDB
 
 Dynamic requests: `dynamic.routes` → DynamicEngine → EndpointData
 
+System management routes (`/api/users`, `/api/groups`, …) are registered **before** the dynamic catch-all.
+
 ## Key collections
 
 - `users`, `groups` — RBAC
-- `endpoints`, `endpointgroups` — API definitions
-- `endpointdatas` — runtime data
+- `endpoints`, `endpointgroups` — API definitions (including `networkAccess` rules)
+- `endpointdatas` — runtime data (cross-linked via `reference` schema fields)
 - `logs` — audit trail
 - `systemsettings` — platform config
+
+## Data relationships
+
+```
+Endpoint ──optional──▶ EndpointGroup (network access defaults)
+Endpoint / EndpointGroup ──networkAccess──▶ allowed domains + IP/CIDR
+EndpointData ──reference field──▶ EndpointData (validated foreign keys)
+```
+
+## Database routes
+
+`GET/POST/PUT/DELETE /api/database/collections/:name` — raw MongoDB access (`manage_users`).
+
+## Runtime behavior
+
+- Endpoint definitions read from MongoDB on each request — **no restart** when routes change
+- JWT refresh re-issues access tokens with full permission set from user groups

@@ -2,7 +2,7 @@
 layout: default
 ---
 
-<img class="banner" src="https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/banner.png" alt="Dynamic API Platform">
+<img class="banner" src="https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/banner.png" alt="Dynamic API Platform">
 
 **Create, manage, and test REST APIs without writing backend code.**
 
@@ -10,7 +10,7 @@ Dynamic API Platform is an open-source full-stack application that lets you defi
 
 ## About
 
-The platform's defining capability is **zero-downtime API creation**: every endpoint you add or edit in the admin panel is registered in MongoDB and served on the next HTTP request. There is no need to restart Node.js, reload nginx, or redeploy containers when you ship a new route.
+The platform’s defining capability is **zero-downtime API creation**: every endpoint you add or edit in the admin panel is registered in MongoDB and served on the next HTTP request. There is no need to restart Node.js, reload nginx, or redeploy containers when you ship a new route.
 
 That sets it apart from tools like **Strapi**, **Directus**, and bespoke Express backends, where content models and routes are usually baked into code at build time or require a restart to pick up changes. Here, the route table is dynamic — save an endpoint in the UI and call it right away with `curl` or your frontend.
 
@@ -28,13 +28,13 @@ Ideal when you need APIs that evolve quickly: internal admin backends, MVPs, int
 | **System endpoint tests** | Tester uses real management API for `/api/users`, `/api/groups`, `/api/profile` |
 | **License** | Apache License 2.0 |
 
-Details: [Changelog on GitHub](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/CHANGELOG.md)
+Details: [Changelog on GitHub](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/CHANGELOG.md)
 
 <p class="quick-links">
   <a href="{{ '/getting-started/' | relative_url }}">Quick Start</a> ·
   <a href="{{ '/architecture/' | relative_url }}">Architecture</a> ·
   <a href="{{ '/api-reference/' | relative_url }}">API Reference</a> ·
-  <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform">GitHub</a>
+  <a href="https://github.com/Developer-RU/Dynamic-API-Platform">GitHub</a>
 </p>
 
 ## Features
@@ -50,7 +50,7 @@ Details: [Changelog on GitHub](https://github.com/Dynamic-API-Platform/Dynamic-A
 ## Quick Start
 
 ```bash
-git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
+git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 docker compose up -d
 ```
@@ -73,7 +73,6 @@ docker compose up -d
 | [RBAC]({{ '/rbac/' | relative_url }}) | Permissions, groups, access types |
 | [Dynamic API Engine]({{ '/dynamic-api-engine/' | relative_url }}) | How runtime endpoints work |
 | [Database Explorer]({{ '/database/' | relative_url }}) | Raw MongoDB admin UI and API |
-| [Network Access]({{ '/network-access/' | relative_url }}) | Domain and IP/CIDR restrictions for dynamic APIs |
 | [Deployment]({{ '/deployment/' | relative_url }}) | Docker, production, reverse proxy |
 | [Configuration]({{ '/configuration/' | relative_url }}) | Environment variables & Settings UI |
 | [Development]({{ '/development/' | relative_url }}) | Local dev setup, project conventions |
@@ -83,7 +82,7 @@ docker compose up -d
 
 ## Preview
 
-![Dashboard preview](https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/dashboard.png)
+![Dashboard preview](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/dashboard.png)
 
 [Full screenshot gallery →]({{ '/screenshots/' | relative_url }})
 
@@ -95,4 +94,4 @@ docker compose up -d
 
 ## License
 
-[Apache License 2.0](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/LICENSE)
+[Apache License 2.0](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/LICENSE)

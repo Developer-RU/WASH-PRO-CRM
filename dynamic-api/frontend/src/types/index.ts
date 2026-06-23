@@ -24,6 +24,13 @@ export interface EndpointGroup {
   icon?: string;
   color?: string;
   order: number;
+  networkAccess?: NetworkAccessRules;
+}
+
+export interface NetworkAccessRules {
+  enabled: boolean;
+  allowedDomains: string[];
+  allowedIpRanges: string[];
 }
 
 export interface SchemaField {
@@ -34,6 +41,7 @@ export interface SchemaField {
   defaultValue?: unknown;
   order: number;
   children?: SchemaField[];
+  refEndpointId?: string;
 }
 
 export interface Endpoint {
@@ -47,6 +55,8 @@ export interface Endpoint {
   fields: SchemaField[];
   accessType: 'public' | 'authenticated' | 'group';
   allowedGroupIds: string[];
+  networkAccess?: NetworkAccessRules;
+  inheritGroupNetworkAccess?: boolean;
   handlers: { name: string; type: string; code?: string; enabled: boolean }[];
   isSystem: boolean;
   enabled: boolean;
@@ -166,4 +176,18 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   error?: string;
+}
+
+export interface DbCollectionInfo {
+  name: string;
+  label: string;
+  count: number;
+}
+
+export interface DbDocumentPage {
+  data: Record<string, unknown>[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

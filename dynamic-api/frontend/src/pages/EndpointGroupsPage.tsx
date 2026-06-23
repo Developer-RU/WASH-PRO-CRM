@@ -3,11 +3,19 @@ import { Plus, Trash2, Edit, Folder } from 'lucide-react';
 import { api } from '../services/api';
 import { EndpointGroup } from '../types';
 import { PageHeader, LoadingSpinner, EmptyState, Modal, Pagination, SearchInput } from '../components/UI';
+import NetworkAccessEditor, { DEFAULT_NETWORK_ACCESS } from '../components/NetworkAccessEditor';
 import { matchesSearch } from '../utils/search';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
 
-const emptyForm = { name: '', description: '', icon: 'folder', color: '#3b82f6', order: 0 };
+const emptyForm = {
+  name: '',
+  description: '',
+  icon: 'folder',
+  color: '#3b82f6',
+  order: 0,
+  networkAccess: { ...DEFAULT_NETWORK_ACCESS },
+};
 
 export default function EndpointGroupsPage() {
   const [groups, setGroups] = useState<EndpointGroup[]>([]);
@@ -53,6 +61,7 @@ export default function EndpointGroupsPage() {
       icon: group.icon || 'folder',
       color: group.color || '#3b82f6',
       order: group.order,
+      networkAccess: group.networkAccess || { ...DEFAULT_NETWORK_ACCESS },
     });
     setModalOpen(true);
   };
@@ -145,6 +154,17 @@ export default function EndpointGroupsPage() {
                 <span className="w-4 h-4 rounded-full border border-dark-border" style={{ backgroundColor: group.color }} />
                 <span className="text-xs font-mono text-dark-muted">{group.color}</span>
               </div>
+              {group.networkAccess?.enabled && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="badge-purple text-xs">Network restricted</span>
+                  {group.networkAccess.allowedDomains.length > 0 && (
+                    <span className="text-xs text-dark-muted">{group.networkAccess.allowedDomains.length} domain(s)</span>
+                  )}
+                  {group.networkAccess.allowedIpRanges.length > 0 && (
+                    <span className="text-xs text-dark-muted">{group.networkAccess.allowedIpRanges.length} IP rule(s)</span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           </div>
@@ -195,6 +215,10 @@ export default function EndpointGroupsPage() {
               ))}
             </div>
           </div>
+          <NetworkAccessEditor
+            value={form.networkAccess}
+            onChange={(networkAccess) => setForm({ ...form, networkAccess })}
+          />
           <button type="submit" className="btn-primary w-full justify-center">
             {editingId ? 'Save Changes' : 'Create Group'}
           </button>

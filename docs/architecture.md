@@ -73,9 +73,12 @@ MongoDB и RabbitMQ **не публикуются** наружу по умолч
 
 ## Зависимость от Dynamic API
 
-Проект включает `dynamic-api/` — форк или клон [Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) с локальными патчами (CORS, DELETE по resource path). Обновление:
+Проект включает `dynamic-api/` — vendored-копия [Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) с локальными патчами (CORS, обработка 502, Safari email). Обновление:
 
 ```bash
-cd dynamic-api && git pull && cd ..
-docker compose up -d --build
+./scripts/update-dynamic-api.sh
+docker compose up -d --build dynamic-api dynamic-api-panel
+./scripts/run-init-seed.sh   # при изменениях схемы API
 ```
+
+Патчи описаны в `patches/dynamic-api-wash.patch`. После merge апстрима в `main` можно задать `DYNAMIC_API_REF=origin/main`.

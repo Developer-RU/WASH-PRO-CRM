@@ -48,6 +48,11 @@ export interface CreateEndpointGroupDto {
   icon?: string;
   color?: string;
   order?: number;
+  networkAccess?: {
+    enabled?: boolean;
+    allowedDomains?: string[];
+    allowedIpRanges?: string[];
+  };
 }
 
 export interface UpdateEndpointGroupDto {
@@ -56,6 +61,11 @@ export interface UpdateEndpointGroupDto {
   icon?: string;
   color?: string;
   order?: number;
+  networkAccess?: {
+    enabled?: boolean;
+    allowedDomains?: string[];
+    allowedIpRanges?: string[];
+  };
 }
 
 export interface SchemaFieldDto {
@@ -66,6 +76,7 @@ export interface SchemaFieldDto {
   defaultValue?: unknown;
   order?: number;
   children?: SchemaFieldDto[];
+  refEndpointId?: string;
 }
 
 export interface CreateEndpointDto {
@@ -78,6 +89,12 @@ export interface CreateEndpointDto {
   schema?: SchemaFieldDto[];
   accessType?: string;
   allowedGroupIds?: string[];
+  networkAccess?: {
+    enabled?: boolean;
+    allowedDomains?: string[];
+    allowedIpRanges?: string[];
+  };
+  inheritGroupNetworkAccess?: boolean;
   handlers?: { name: string; type: string; code?: string; enabled?: boolean }[];
 }
 
@@ -91,6 +108,12 @@ export interface UpdateEndpointDto {
   schema?: SchemaFieldDto[];
   accessType?: string;
   allowedGroupIds?: string[];
+  networkAccess?: {
+    enabled?: boolean;
+    allowedDomains?: string[];
+    allowedIpRanges?: string[];
+  };
+  inheritGroupNetworkAccess?: boolean;
   handlers?: { name: string; type: string; code?: string; enabled?: boolean }[];
   enabled?: boolean;
 }
@@ -102,4 +125,6 @@ export interface TestEndpointDto {
   body?: unknown;
   params?: Record<string, string>;
   query?: Record<string, string>;
+  clientIp?: string;
+  applyNetworkAccess?: boolean;
 }

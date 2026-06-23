@@ -28,8 +28,8 @@ docker compose up -d --build
 ## Обновление
 
 ```bash
-# Обновить Dynamic API (если используется git submodule)
-cd dynamic-api && git pull && cd ..
+# Обновить vendored Dynamic API Platform
+./scripts/update-dynamic-api.sh
 
 # Пересобрать стек
 docker compose up -d --build

@@ -80,21 +80,21 @@ const SYSTEM_ENDPOINTS = [
   },
   {
     name: 'List Users',
-    description: 'Get all users',
+    description: 'Get all users (management API — uses RBAC permissions)',
     slug: 'users-list',
     path: '/api/users',
     method: 'GET' as const,
     fields: [],
-    accessType: 'group' as const,
+    accessType: 'authenticated' as const,
   },
   {
     name: 'List Groups',
-    description: 'Get all user groups',
+    description: 'Get all user groups (management API — uses RBAC permissions)',
     slug: 'groups-list',
     path: '/api/groups',
     method: 'GET' as const,
     fields: [],
-    accessType: 'group' as const,
+    accessType: 'authenticated' as const,
   },
   {
     name: 'User Profile',
@@ -151,6 +151,12 @@ export async function seedDatabase(): Promise<void> {
         allowedGroupIds: [],
       });
       console.log(`  Created system endpoint: ${epData.method} ${epData.path}`);
+    } else if (existing.isSystem && epData.accessType !== existing.accessType) {
+      await Endpoint.updateOne(
+        { _id: existing._id },
+        { $set: { accessType: epData.accessType, description: epData.description } }
+      );
+      console.log(`  Updated system endpoint: ${epData.method} ${epData.path}`);
     }
   }
 

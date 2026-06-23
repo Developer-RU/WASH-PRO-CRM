@@ -10,6 +10,7 @@ const SYSTEM_PATHS = [
   '/api/profile',
   '/api/endpoints',
   '/api/dashboard',
+  '/api/database',
   '/api/health',
   '/api/csrf-token',
 ];
@@ -31,7 +32,11 @@ router.all('/*', optionalAuth, asyncHandler(async (req: AuthenticatedRequest, re
     req.body,
     req.query as Record<string, string>,
     req.user,
-    { ip: getClientIp(req), userAgent: req.headers['user-agent'] as string }
+    {
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] as string,
+      headers: req.headers as Record<string, string | string[] | undefined>,
+    }
   );
 
   res.status(result.statusCode).json(result.body);

@@ -1,7 +1,8 @@
 # Dynamic API Platform Wiki
 
 > This folder mirrors the GitHub Wiki content.  
-> Full documentation is also available on [GitHub Pages](https://dynamic-api-platform.github.io/Dynamic-API-Platform/).
+> Full documentation is also available on [GitHub Pages](https://developer-ru.github.io/Dynamic-API-Platform/).  
+> Recent changes: [CHANGELOG.md](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/CHANGELOG.md)
 
 ## Pages
 
@@ -14,6 +15,8 @@
 | [API-Reference](API-Reference.md) | REST API docs |
 | [RBAC-and-Permissions](RBAC-and-Permissions.md) | Access control |
 | [Dynamic-API-Engine](Dynamic-API-Engine.md) | Runtime engine |
+| [Network-Access](Network-Access.md) | Domain and IP/CIDR restrictions |
+| [Database-Explorer](Database-Explorer.md) | Raw MongoDB admin UI |
 | [Deployment](Deployment.md) | Production deploy |
 | [Configuration](Configuration.md) | Env vars & settings |
 | [FAQ](FAQ.md) | Common questions |
@@ -25,7 +28,7 @@
 
 ```bash
 # Clone wiki repo (after creating first wiki page on GitHub)
-git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.wiki.git
+git clone https://github.com/Developer-RU/dynamic-api-platform.wiki.git
 cp wiki/*.md Dynamic-API-Platform.wiki/
 cd Dynamic-API-Platform.wiki
 git add . && git commit -m "docs: import wiki pages" && git push

@@ -14,13 +14,40 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
+export class UnauthorizedError extends Error {
+  constructor(message = 'Session expired') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+type UnauthorizedListener = () => void;
+
 class ApiClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
+  private unauthorizedListeners = new Set<UnauthorizedListener>();
 
   constructor() {
     this.accessToken = localStorage.getItem('accessToken');
     this.refreshToken = localStorage.getItem('refreshToken');
+  }
+
+  onUnauthorized(listener: UnauthorizedListener) {
+    this.unauthorizedListeners.add(listener);
+    return () => {
+      this.unauthorizedListeners.delete(listener);
+    };
+  }
+
+  private shouldHandleUnauthorized(path: string) {
+    return !path.startsWith('/api/auth/login') && !path.startsWith('/api/auth/register');
+  }
+
+  private forceLogout(message = 'Session expired'): never {
+    this.clearTokens();
+    this.unauthorizedListeners.forEach((listener) => listener());
+    throw new UnauthorizedError(message);
   }
 
   setTokens(access: string, refresh: string) {
@@ -53,27 +80,42 @@ class ApiClient {
 
     const response = await fetch(`${API_URL}${path}`, { ...options, headers });
 
-    if (response.status === 401 && this.refreshToken) {
-      const refreshed = await this.tryRefresh();
-      if (refreshed) {
-        headers['Authorization'] = `Bearer ${this.accessToken}`;
-        const retry = await fetch(`${API_URL}${path}`, { ...options, headers });
-        return this.handleResponse<T>(retry);
+    if (response.status === 401 && this.shouldHandleUnauthorized(path)) {
+      if (this.refreshToken) {
+        const refreshed = await this.tryRefresh();
+        if (refreshed) {
+          headers['Authorization'] = `Bearer ${this.accessToken}`;
+          const retry = await fetch(`${API_URL}${path}`, { ...options, headers });
+          if (retry.status === 401) {
+            this.forceLogout();
+          }
+          return this.handleResponse<T>(retry);
+        }
       }
-      this.clearTokens();
-      window.location.href = '/login';
-      throw new Error('Session expired');
+      this.forceLogout();
     }
 
     return this.handleResponse<T>(response);
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
-    const data = await response.json();
+    let data: { error?: string; message?: string };
+    try {
+      data = await response.json();
+    } catch {
+      if (!response.ok) {
+        const hint = response.status === 502
+          ? 'API unavailable (502). Restart dynamic-api-panel or check dynamic-api.'
+          : `Request failed (${response.status})`;
+        throw new Error(hint);
+      }
+      throw new Error('Invalid API response (expected JSON)');
+    }
+
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Request failed');
     }
-    return data;
+    return data as T;
   }
 
   private async tryRefresh(): Promise<boolean> {
@@ -293,6 +335,51 @@ class ApiClient {
       { method: 'DELETE' }
     );
     return res;
+  }
+
+  async getDbCollections() {
+    const res = await this.request<{ success: boolean; data: import('../types').DbCollectionInfo[] }>(
+      '/api/database/collections'
+    );
+    return res.data;
+  }
+
+  async getDbDocuments(collection: string, page = 1, limit = 20, search?: string) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search?.trim()) params.set('search', search.trim());
+    const res = await this.request<{ success: boolean; data: import('../types').DbDocumentPage }>(
+      `/api/database/collections/${encodeURIComponent(collection)}?${params}`
+    );
+    return res.data;
+  }
+
+  async getDbDocument(collection: string, id: string) {
+    const res = await this.request<{ success: boolean; data: Record<string, unknown> }>(
+      `/api/database/collections/${encodeURIComponent(collection)}/${id}`
+    );
+    return res.data;
+  }
+
+  async createDbDocument(collection: string, data: Record<string, unknown>) {
+    const res = await this.request<{ success: boolean; data: Record<string, unknown> }>(
+      `/api/database/collections/${encodeURIComponent(collection)}`,
+      { method: 'POST', body: JSON.stringify(data) }
+    );
+    return res.data;
+  }
+
+  async updateDbDocument(collection: string, id: string, data: Record<string, unknown>) {
+    const res = await this.request<{ success: boolean; data: Record<string, unknown> }>(
+      `/api/database/collections/${encodeURIComponent(collection)}/${id}`,
+      { method: 'PUT', body: JSON.stringify(data) }
+    );
+    return res.data;
+  }
+
+  async deleteDbDocument(collection: string, id: string) {
+    await this.request(`/api/database/collections/${encodeURIComponent(collection)}/${id}`, {
+      method: 'DELETE',
+    });
   }
 
   async callDynamicApi(path: string, method: string, body?: unknown) {

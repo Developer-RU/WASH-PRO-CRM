@@ -1,23 +1,38 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Users, Globe, Activity, AlertTriangle, Shield } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { api } from '../services/api';
+import { api, UnauthorizedError } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { DashboardStats } from '../types';
 import { StatCard, PageHeader, LoadingSpinner } from '../components/UI';
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     api.getDashboardStats()
       .then(setStats)
-      .catch(console.error)
+      .catch((err) => {
+        if (err instanceof UnauthorizedError) return;
+        console.error(err);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
+  if (!user || !api.isAuthenticated) return <Navigate to="/login" replace />;
   if (loading) return <LoadingSpinner />;
-  if (!stats) return <div className="text-center text-dark-muted">Failed to load dashboard</div>;
+  if (!stats) {
+    return (
+      <div className="text-center text-dark-muted py-12">
+        {loadError ? 'Failed to load dashboard. Please try again.' : 'Failed to load dashboard'}
+      </div>
+    );
+  }
 
   const chartData = stats.requestsOverTime.map((r, i) => ({
     date: r.date.slice(5),

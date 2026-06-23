@@ -69,13 +69,13 @@ export function SearchInput({
   );
 }
 
-export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-dark-card border border-dark-border rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className={`relative bg-dark-card border border-dark-border rounded-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl ${wide ? 'max-w-4xl' : 'max-w-lg'}`}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
           <h2 className="font-semibold">{title}</h2>
           <button onClick={onClose} className="text-dark-muted hover:text-dark-text text-xl leading-none">&times;</button>
