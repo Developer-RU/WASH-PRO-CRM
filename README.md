@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/MongoDB-7-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB">
   <img src="https://img.shields.io/badge/RabbitMQ-Telemetry-FF6600?style=flat-square&logo=rabbitmq&logoColor=white" alt="RabbitMQ">
-  <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform"><img src="https://img.shields.io/badge/Dynamic_API-Platform-3b82f6?style=flat-square" alt="Dynamic API Platform"></a>
+  <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform"><img src="https://img.shields.io/badge/Dynamic_API-v1.5.6-3b82f6?style=flat-square" alt="Dynamic API Platform v1.5.6"></a>
   <img src="https://img.shields.io/badge/License-Proprietary-red?style=flat-square" alt="License">
 </p>
 
@@ -139,7 +139,13 @@ WASH-PHO-CRM/
 ## Обновление и бэкап
 
 ```bash
+# Обновить встроенную Dynamic API Platform (v1.5.6+)
+./scripts/update-dynamic-api.sh
+docker compose up -d --build dynamic-api dynamic-api-panel
+
+# Пересобрать весь стек
 docker compose up -d --build
+
 ./scripts/restore.sh wash-crm-2024-06-22T02-00-00.archive.gz
 ```
 

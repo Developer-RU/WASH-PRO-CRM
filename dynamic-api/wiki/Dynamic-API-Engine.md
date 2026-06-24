@@ -1,4 +1,4 @@
-Full guide: [Dynamic API Engine](https://developer-ru.github.io/Dynamic-API-Platform/dynamic-api-engine/)
+Full guide: [Dynamic API Engine](https://dynamic-api-platform.github.io/Dynamic-API-Platform/dynamic-api-engine/)
 
 Endpoints defined in MongoDB are served **at runtime without restart or redeploy**.
 

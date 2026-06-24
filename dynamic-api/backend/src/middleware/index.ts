@@ -1,37 +1,50 @@
 import { Request, Response, NextFunction } from 'express';
-import { authService } from '../services';
+import { authService, apiKeyService } from '../services';
 import { JwtPayload, Permission } from '../types';
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
 }
 
-export function authenticate(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+async function resolveAuth(req: AuthenticatedRequest): Promise<JwtPayload | null> {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ success: false, error: 'Unauthorized' });
-    return;
+  const apiKeyHeader = req.headers['x-api-key'] as string | undefined;
+
+  if (apiKeyHeader) {
+    return apiKeyService.authenticate(apiKeyHeader);
   }
 
-  try {
-    const token = authHeader.slice(7);
-    req.user = authService.verifyAccessToken(token);
-    next();
-  } catch {
-    res.status(401).json({ success: false, error: 'Invalid or expired token' });
+  if (authHeader?.startsWith('ApiKey ')) {
+    return apiKeyService.authenticate(authHeader.slice(7).trim());
   }
+
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      return authService.verifyAccessToken(authHeader.slice(7));
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+export function authenticate(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  void resolveAuth(req).then((user) => {
+    if (!user) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+    req.user = user;
+    next();
+  });
 }
 
 export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      req.user = authService.verifyAccessToken(authHeader.slice(7));
-    } catch {
-      // ignore invalid token for optional auth
-    }
-  }
-  next();
+  void resolveAuth(req).then((user) => {
+    if (user) req.user = user;
+    next();
+  });
 }
 
 export function requirePermission(...permissions: Permission[]) {

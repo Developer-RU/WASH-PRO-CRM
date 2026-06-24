@@ -2,6 +2,9 @@ import os from 'os';
 import fs from 'fs/promises';
 import path from 'path';
 import { env } from '../config/env';
+import { cronJobRepository } from '../repositories';
+import { getAppVersion } from './update-settings.service';
+import { updateExecutorService } from './update-executor.service';
 
 export interface SystemInfo {
   hostname: string;
@@ -39,6 +42,10 @@ export interface SystemInfo {
   };
   loadAverage: number[];
   timestamp: string;
+  cronJobsActive: number;
+  cronJobsTotal: number;
+  deployMode: string;
+  updateExecutorReady: boolean;
 }
 
 async function countFiles(dir: string, maxDepth = 5, depth = 0): Promise<number> {
@@ -97,10 +104,12 @@ export class SystemService {
       }
     }
 
-    const [disk, appFiles, logFiles] = await Promise.all([
+    const [disk, appFiles, logFiles, cronJobsTotal, cronJobsActive] = await Promise.all([
       getDiskStats('/'),
       countFiles('/app'),
       countFiles('/app/logs').catch(() => 0),
+      cronJobRepository.count(),
+      cronJobRepository.countEnabled(),
     ]);
 
     return {
@@ -119,9 +128,11 @@ export class SystemService {
       memoryUsagePercent: Math.round((usedMemory / totalMemory) * 100),
       uptime: os.uptime(),
       nodeVersion: process.version,
-      appVersion: '1.0.0',
+      appVersion: getAppVersion(),
       appName: 'Dynamic API Platform',
       environment: env.nodeEnv,
+      deployMode: env.updateDeployMode,
+      updateExecutorReady: updateExecutorService.isAvailable(),
       disk,
       files: {
         appFiles,
@@ -131,6 +142,8 @@ export class SystemService {
       network: { interfaces },
       loadAverage: os.loadavg(),
       timestamp: new Date().toISOString(),
+      cronJobsActive,
+      cronJobsTotal,
     };
   }
 }

@@ -1,13 +1,14 @@
-import { ReactNode } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Shield, Globe, FileText,
-  LogOut, Sun, Moon, Zap, Menu, X, Server, Folders, Settings, Database,
+  LogOut, Sun, Moon, Zap, Menu, X, Server, Folders, Settings,
+  BookOpen, Github, Network, Database, FileCode, Clock, Webhook, Key, Bot,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useState } from 'react';
 import { userHasPermission } from '../utils/permissions';
+import UpdateBanner from './UpdateBanner';
 
 type NavItem = {
   to: string;
@@ -37,6 +38,17 @@ const navSections: { label: string; items: NavItem[] }[] = [
     items: [
       { to: '/endpoints', icon: Globe, label: 'Endpoints' },
       { to: '/endpoint-groups', icon: Folders, label: 'Endpoint Groups' },
+      { to: '/api-schema', icon: Network, label: 'API Schema' },
+      { to: '/api-docs', icon: FileCode, label: 'API Docs' },
+    ],
+  },
+  {
+    label: 'Automation',
+    items: [
+      { to: '/cron', icon: Clock, label: 'Cron Jobs', permission: 'manage_api' },
+      { to: '/webhooks', icon: Webhook, label: 'Webhooks', permission: 'manage_api' },
+      { to: '/api-keys', icon: Key, label: 'API Keys', permission: 'manage_api' },
+      { to: '/mcp', icon: Bot, label: 'MCP Server', permission: 'manage_api' },
     ],
   },
   {
@@ -45,35 +57,71 @@ const navSections: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+const DOCS_URL = 'https://dynamic-api-platform.github.io/Dynamic-API-Platform/';
+const GITHUB_URL = 'https://github.com/Dynamic-API-Platform';
+const DEVELOPER_URL = 'https://github.com/Developer-RU';
+
+function externalLinkClass() {
+  return 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200';
+}
+
+function navClass(isActive: boolean) {
+  return [
+    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+    isActive
+      ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300'
+      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
+  ].join(' ');
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((r) => r.json())
+      .then((d: { version?: string }) => {
+        if (d.version) setAppVersion(d.version);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-dark-bg">
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <Zap className="w-5 h-5 text-white" />
+    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <aside
+        className={[
+          'fixed inset-y-0 left-0 z-40 flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white transition-transform dark:border-slate-800 dark:bg-slate-900 lg:static lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        ].join(' ')}
+      >
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm">
+            <Zap className="h-5 w-5" />
           </div>
-          <div>
-            <h1 className="font-bold text-sm tracking-tight">Dynamic API</h1>
-            <p className="text-[10px] text-dark-muted">Platform v1.0</p>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">Dynamic API</div>
+            <div className="text-xs text-slate-500">
+              Platform {appVersion ? `v${appVersion}` : '…'}
+            </div>
           </div>
-          <button className="ml-auto lg:hidden text-dark-muted hover:text-dark-text" onClick={() => setSidebarOpen(false)}>
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="flex-1 py-3 px-3 overflow-y-auto">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
           {navSections.map((section) => (
-            <div key={section.label} className="mb-4">
-              <p className="nav-section-label">{section.label}</p>
+            <div key={section.label} className="mb-4 last:mb-0">
+              <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                {section.label}
+              </div>
               <div className="space-y-0.5">
                 {section.items
                   .filter((item) => !item.permission || userHasPermission(user, item.permission))
@@ -82,10 +130,10 @@ export default function Layout({ children }: { children: ReactNode }) {
                     key={item.to}
                     to={item.to}
                     end={item.to === '/'}
-                    className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                    className={({ isActive }) => navClass(isActive)}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <item.icon className="w-4 h-4 shrink-0" />
+                    <item.icon className="h-4 w-4 shrink-0" />
                     {item.label}
                   </NavLink>
                 ))}
@@ -94,36 +142,79 @@ export default function Layout({ children }: { children: ReactNode }) {
           ))}
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="flex items-center gap-3 px-2 mb-3">
-            <div className="user-avatar">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-[10px] text-dark-muted truncate">{user?.login}</p>
-            </div>
+        <div className="shrink-0 border-t border-slate-200 p-3 dark:border-slate-800">
+          <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Resources
           </div>
-          <div className="flex gap-2">
-            <button onClick={toggleTheme} className="btn-secondary flex-1 justify-center py-1.5" title="Toggle theme">
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <button onClick={logout} className="btn-secondary flex-1 justify-center py-1.5" title="Logout">
-              <LogOut className="w-4 h-4" />
-            </button>
+          <div className="space-y-0.5">
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={externalLinkClass()}
+            >
+              <BookOpen className="h-4 w-4 shrink-0" />
+              Documentation
+            </a>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={externalLinkClass()}
+            >
+              <Github className="h-4 w-4 shrink-0" />
+              GitHub
+            </a>
+            <a
+              href={DEVELOPER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={externalLinkClass()}
+            >
+              <Github className="h-4 w-4 shrink-0" />
+              Developer
+            </a>
           </div>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="mobile-header">
-          <button onClick={() => setSidebarOpen(true)} className="text-dark-muted hover:text-dark-text">
-            <Menu className="w-5 h-5" />
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
+          <button
+            type="button"
+            className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
           </button>
-          <span className="font-bold text-sm">Dynamic API Platform</span>
+
+          <div className="hidden text-sm font-medium text-slate-700 dark:text-slate-200 lg:block">
+            Dynamic API Platform
+          </div>
+
+          <div className="ml-auto flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{user?.name}</div>
+              <div className="text-xs text-slate-500">{user?.login}</div>
+            </div>
+            <button type="button" onClick={toggleTheme} className="btn-secondary !px-2.5 !py-2" title="Toggle theme">
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <button type="button" onClick={logout} className="btn-secondary !px-2.5 !py-2" title="Logout">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 main-content">
+        <main className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
+          <UpdateBanner />
           {children}
         </main>
       </div>

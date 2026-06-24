@@ -12,7 +12,41 @@ const ACTION_COLORS: Record<string, string> = {
   endpoint_create: 'badge-yellow',
   endpoint_update: 'badge-yellow',
   endpoint_delete: 'badge-red',
+  user_create: 'badge-blue',
+  user_update: 'badge-blue',
+  user_delete: 'badge-red',
+  webhook_dispatch: 'badge-purple',
+  cron_run: 'badge-yellow',
+  mcp_call: 'badge-green',
+  api_key_used: 'badge-yellow',
 };
+
+const FILTER_ACTIONS = [
+  '',
+  'login',
+  'logout',
+  'api_call',
+  'error',
+  'mcp_call',
+  'api_key_used',
+  'webhook_dispatch',
+  'cron_run',
+  'endpoint_create',
+  'endpoint_update',
+  'endpoint_delete',
+  'user_create',
+  'user_update',
+  'user_delete',
+];
+
+function displaySource(log: LogEntry): string {
+  if (log.source) return log.source;
+  if (log.action === 'mcp_call') return 'mcp';
+  if (log.action === 'webhook_dispatch' || log.action === 'cron_run') return 'system';
+  if (log.userAgent === 'mcp-server') return 'mcp';
+  if (log.userAgent === 'cron-scheduler') return 'cron';
+  return '—';
+}
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -48,21 +82,21 @@ export default function LogsPage() {
 
   return (
     <div>
-      <PageHeader title="Audit Logs" subtitle="System activity and API call logs" />
+      <PageHeader title="Audit Logs" subtitle="System activity, API calls, webhooks, cron, and MCP events" />
 
       <SearchInput
         className="mb-4"
         value={search}
         onChange={setSearch}
-        placeholder="Search by message, action or IP..."
+        placeholder="Search by message, action, source or IP..."
       />
 
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {['', 'login', 'error', 'api_call', 'endpoint_create', 'endpoint_update', 'endpoint_delete'].map((action) => (
+      <div className="mb-4 flex flex-wrap gap-2">
+        {FILTER_ACTIONS.map((action) => (
           <button
-            key={action}
+            key={action || 'all'}
             onClick={() => handleFilter(action)}
-            className={`btn-secondary py-1.5 text-xs ${filter === action ? 'ring-2 ring-primary-500' : ''}`}
+            className={`btn-secondary py-1.5 text-xs ${filter === action ? 'ring-2 ring-brand-500' : ''}`}
           >
             {action || 'All'}
           </button>
@@ -72,13 +106,14 @@ export default function LogsPage() {
       {loading ? <LoadingSpinner /> : logs.length === 0 ? (
         <EmptyState message={search ? 'No logs match your search' : 'No logs found'} />
       ) : (
-        <div className="card !p-0 overflow-hidden">
-          <div className="table-container border-0 rounded-none">
+        <div className="card overflow-hidden !p-0">
+          <div className="table-container rounded-none border-0">
             <table className="table">
               <thead>
                 <tr>
                   <th>Time</th>
                   <th>Action</th>
+                  <th>Source</th>
                   <th>Message</th>
                   <th>User</th>
                   <th>Status</th>
@@ -88,7 +123,7 @@ export default function LogsPage() {
               <tbody>
                 {logs.map((log) => (
                   <tr key={log._id}>
-                    <td className="text-xs text-dark-muted whitespace-nowrap">
+                    <td className="whitespace-nowrap text-xs text-dark-muted">
                       {new Date(log.createdAt).toLocaleString()}
                     </td>
                     <td>
@@ -96,8 +131,9 @@ export default function LogsPage() {
                         {log.action}
                       </span>
                     </td>
+                    <td className="text-xs text-dark-muted">{displaySource(log)}</td>
                     <td className="max-w-xs truncate">{log.message}</td>
-                    <td className="text-dark-muted">{log.userId?.login || '-'}</td>
+                    <td className="text-dark-muted">{log.userId?.login || '—'}</td>
                     <td>
                       {log.statusCode && (
                         <span className={log.statusCode < 400 ? 'badge-green' : 'badge-red'}>
@@ -105,8 +141,8 @@ export default function LogsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="text-dark-muted text-xs">
-                      {log.responseTime ? `${log.responseTime}ms` : '-'}
+                    <td className="text-xs text-dark-muted">
+                      {log.responseTime ? `${log.responseTime}ms` : '—'}
                     </td>
                   </tr>
                 ))}

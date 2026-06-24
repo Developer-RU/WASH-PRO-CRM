@@ -6,12 +6,14 @@
 
 **Open-source platform for creating, managing, and testing REST APIs without writing backend code.**
 
+[![Release](https://img.shields.io/github/v/release/Dynamic-API-Platform/Dynamic-API-Platform?label=v1.5.6)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.6)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/docker-compose.yml)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&logoColor=white)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/tree/main/k8s)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/backend/package.json)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/frontend/package.json)
 
-[Documentation](https://dynamic-api-platform.github.io/Dynamic-API-Platform/) · [Quick Start](https://dynamic-api-platform.github.io/Dynamic-API-Platform/getting-started/) · [Main Repository](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) · [Wiki](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/wiki)
+[Documentation](https://dynamic-api-platform.github.io/Dynamic-API-Platform/) · [Quick Start](https://dynamic-api-platform.github.io/Dynamic-API-Platform/getting-started/) · [Main Repository](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) · [Wiki](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/wiki) · [Releases](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases)
 
 </div>
 
@@ -35,6 +37,7 @@ We built this organization to host the core platform, documentation, and communi
 | Headless CMS tools are heavy for simple REST | Focused engine: schemas, access control, CRUD |
 | Prototypes stall on backend scaffolding | UI-first endpoint builder + built-in tester |
 | Security is bolted on late | JWT, RBAC, network access rules, audit logs from day one |
+| Production needs HA and scale | Docker replica set or Kubernetes manifests included |
 
 ---
 
@@ -42,14 +45,24 @@ We built this organization to host the core platform, documentation, and communi
 
 ### [Dynamic-API-Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform)
 
-The main repository — backend (Express + TypeScript), admin panel (React + Tailwind), Docker Compose deployment, and GitHub Pages docs.
+Backend (Express + TypeScript), admin panel (React + Tailwind), three deployment options, GitHub Pages docs.
 
 ```bash
 git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 docker compose up -d
-# Admin UI → http://localhost:8080
+# Admin UI → http://localhost:8080  (admin / Admin123!)
 ```
+
+**Deployment options**
+
+| Variant | Command |
+|---------|---------|
+| Docker (single) | `docker compose up -d` |
+| MongoDB replica set | `docker compose -f docker-compose.replica.yml up -d` |
+| Kubernetes | `./k8s/scripts/deploy.sh` |
+
+[Full comparison →](https://dynamic-api-platform.github.io/Dynamic-API-Platform/deployment-variants/)
 
 **Highlights**
 
@@ -57,10 +70,18 @@ docker compose up -d
 |------------|-------------|
 | **Dynamic engine** | GET/POST/PUT/PATCH/DELETE routes defined in the UI |
 | **`reference` fields** | Foreign keys between endpoints with `?populate=` |
+| **Automation** | Cron, webhooks, API keys, **MCP server** for AI agents |
 | **Network access** | Restrict callers by domain and IP/CIDR pools |
 | **Database Explorer** | Raw MongoDB admin UI for power users |
 | **RBAC** | Permission-based groups for users and management API |
+| **Software updates** | In-app updates from GitHub Releases (Docker, out of the box) |
+| **Deployment** | Docker, MongoDB replica set, Kubernetes |
+| **Testing** | Vitest (30 tests), load test, GitHub Actions CI |
 | **Zero downtime** | Route changes without restarting the server |
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/dashboard.png" alt="Dashboard" width="720" />
+</p>
 
 ---
 
@@ -69,13 +90,13 @@ docker compose up -d
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   React     │────▶│   Express   │────▶│   MongoDB   │
-│  Admin UI   │     │  TypeScript │     │      7      │
+│  Admin UI   │     │  TypeScript │     │  7 / rs0    │
 └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS  
 - **Backend:** Node.js 20, Express, Mongoose, JWT  
-- **Deploy:** Docker Compose, nginx, GitHub Actions CI  
+- **Deploy:** Docker Compose, MongoDB replica set, Kubernetes (`k8s/`), GitHub Actions CI  
 
 ---
 
@@ -85,8 +106,11 @@ docker compose up -d
 |----------|------|
 | GitHub Pages | https://dynamic-api-platform.github.io/Dynamic-API-Platform/ |
 | Getting Started | https://dynamic-api-platform.github.io/Dynamic-API-Platform/getting-started/ |
-| Dynamic API Engine | https://dynamic-api-platform.github.io/Dynamic-API-Platform/dynamic-api-engine/ |
-| Network Access | https://dynamic-api-platform.github.io/Dynamic-API-Platform/network-access/ |
+| Deployment Variants | https://dynamic-api-platform.github.io/Dynamic-API-Platform/deployment-variants/ |
+| Automation & MCP | https://dynamic-api-platform.github.io/Dynamic-API-Platform/automation/ |
+| Testing | https://dynamic-api-platform.github.io/Dynamic-API-Platform/testing/ |
+| Kubernetes | https://dynamic-api-platform.github.io/Dynamic-API-Platform/kubernetes/ |
+| Software Updates | https://dynamic-api-platform.github.io/Dynamic-API-Platform/updates/ |
 | Wiki | https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/wiki |
 
 ---
@@ -95,8 +119,8 @@ docker compose up -d
 
 - **Report bugs** — [Issues](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/issues)
 - **Suggest features** — [Feature requests](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/issues/new?template=feature_request.yml)
-- **Contribute** — see [CONTRIBUTING.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/CONTRIBUTING.md)
-- **Security** — private reports via [SECURITY.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/SECURITY.md)
+- **Contribute** — [CONTRIBUTING.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/CONTRIBUTING.md)
+- **Security** — [SECURITY.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/SECURITY.md)
 
 ---
 
@@ -110,6 +134,6 @@ Projects under this organization are open source under the **[Apache License 2.0
 
 **Build APIs at the speed of configuration.**
 
-<sub>Maintained by the Dynamic API Platform community.</sub>
+<sub>Maintained by the Dynamic API Platform community · <a href="https://github.com/Developer-RU">Developer</a></sub>
 
 </div>

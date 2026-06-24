@@ -7,8 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Planned
+- Multi-tenant workspace support
 
+## [1.5.6] - 2026-06-18
+
+### Changed
+- **GitHub Pages**, **wiki**, and **organization profile** synced with v1.5.5 update fixes
+- **docs/updates.md** — cancel button, stale job reconciliation, bash updater notes
+
+## [1.5.5] - 2026-06-18
+
+### Fixed
+- **Stuck update banner** — stale jobs (e.g. target v1.5.2 while already on a newer version) are auto-failed on startup and status checks
+- **Updater crash** — self-update script now runs with `bash` (not `sh`); POSIX-compatible loops in `self-update.sh`
+- **Executor** — detects failed `docker run` spawn and marks job failed instead of leaving it queued forever
+- **Cancel** button on Settings for active update jobs
+
+## [1.5.3] - 2026-06-18
+
+### Fixed
+- **Update snapshot step** no longer hangs — removed slow `docker compose images` scan and full-directory tar backup; snapshot completes in seconds
+- **System page** shows correct installed version from `APP_VERSION` / `package.json` (was hardcoded `1.0.0`)
+- **Settings** platform version synced with installed release
+- **Sidebar** version loaded dynamically from `/api/health`
+
+### Changed
+- **System page** — Auto-update status and deploy mode cards
+- Archive-based rollback uses GitHub release tarball of previous version
+
+## [1.5.2] - 2026-06-18
+
+### Added
+- **Update now** button in Settings and notification banner — checks GitHub then applies the latest release
+- **GitHub archive fallback** for deployments without `.git` (ZIP download) with backup-based rollback
+
+### Changed
+- **Auto-update enabled by default** in Docker Compose — socket + project mount preconfigured for local PC and VPS
+- **Updater** uses compose network health check (`http://backend:3001/api/health`) and named data volume
+- **Host path resolution** for detached updater via `${PWD}` and `/proc/mountinfo`
+
+### Fixed
+- Update job data volume mount for detached updater containers
+
+## [1.5.1] - 2026-06-18
+
+### Fixed
+- **Startup crash** — update settings seed no longer writes `null` values to `SystemSettings` (MongoDB validation error on first boot)
+
+## [1.5.0] - 2026-06-18
+
+### Added
+- **Software update system** — GitHub Releases check, in-app notification banner, Settings → Software Updates
+- **Scheduled update checks** and optional **auto-update** with configurable intervals
+- **Update jobs** with step progress (snapshot → fetch → deploy → health)
+- **Automatic rollback** on failed health check after deploy
+- **Self-update scripts** — `scripts/self-update.sh`, `scripts/self-update-rollback.sh` (detached Docker runner)
+- **Update API** — `/api/updates/*` (status, settings, apply, rollback, dismiss)
+- **Documentation** — [docs/updates.md](docs/updates.md)
+- **Semver tests** — version comparison for release checks (30 unit tests total)
+
+### Changed
+- **Docker backend image** — root build context; includes `docker-cli`, `git`, `jq`, `curl`, updater scripts
+- **docker-compose.yml** / **docker-compose.replica.yml** — update env vars, `update_data` volume, `host.docker.internal`
+- **Health endpoint** — returns installed `version`
+
+## [1.4.0] - 2026-06-24
+
+### Added
+- **Three deployment variants** — [Deployment Variants](docs/deployment-variants.md): Docker single-node, Docker MongoDB replica set (3 nodes), Kubernetes (StatefulSet + scaled backend)
+- **Docker replica set** — `docker-compose.replica.yml`, `docker/mongo/replica-init.sh`, npm scripts `docker:replica:*`
+- **Kubernetes manifests** — `k8s/` (MongoDB StatefulSet, backend/frontend Deployments, `k8s/scripts/deploy.sh`, npm scripts `k8s:*`)
+- **Unit tests** (Vitest) — schema validation, network access, audit logs, MCP naming, security helpers (27 tests)
+- **Load test** — `npm run test:load` (autocannon) for health, dashboard, endpoints scenarios
+- **Testing docs** — [docs/testing.md](docs/testing.md); CI runs `npm test`
+- **Screenshot automation** — `npm run screenshots` / `scripts/capture-screenshots.mjs`; refreshed UI gallery (14 pages including Logs)
+- **Runtime strict validation** — reject unknown fields on POST/PUT/PATCH; `pickSchemaData` strips extra fields before MongoDB write
+- **MCP Server** admin page at `/mcp` — tools table, JSON-RPC examples, endpoint URL
+- **Dashboard automation KPIs** — Cron Jobs, Webhooks, API Keys, MCP Tools cards
+- **Dashboard charts** — webhook deliveries, cron runs, API traffic by source (direct/MCP/cron/API key)
+- **Automation health** widget on dashboard — cron/webhook errors, unused API keys
+- **Audit log actions** — `webhook_dispatch`, `cron_run`, `mcp_call`, `api_key_used` with `source` field
+- **Logs filters** — new action types and Source column
+
+### Changed
+- **MongoDB indexes** — compound indexes on `EndpointData`, `Log`, `Endpoint`, `ApiKey` for list/stats queries
+- **MongoDB replica set URI** support in `database.ts` (`serverSelectionTimeoutMS`, `retryWrites`)
+- **Lean audit logs** — `compactLogEntry` omits empty fields; invalid API-key user IDs no longer stored on logs
+- **Removed duplicate** `api_key_used` log entries (API key traffic tracked via `source` on `api_call`)
+- **Docs screenshots** — relative URLs for GitHub Pages; dashboard reflects automation KPIs
+
+### Fixed
+- Sidebar layout — navigation scrolls inside the panel; Resources footer stays visible without page scroll
+- Swagger UI — load `swagger-ui-standalone-preset.js` for `StandaloneLayout`
+- K8s deploy script — correct project root path; MongoDB StatefulSet healthcheck YAML quoting
+
+## [1.3.0] - 2026-06-18
+
+### Added
+- **Cron scheduler** — periodic jobs (JavaScript, HTTP, internal endpoint calls) via `node-cron`
+- **Outbound webhooks** — `user.*`, `endpoint.*`, `api.error` events with HMAC signatures
+- **MCP server** — JSON-RPC at `POST /api/mcp` (`tools/list`, `tools/call`, OpenAPI resource)
+- **API versioning** — optional `apiVersion` on endpoints (also serves `/api/v1/...`)
+- **API keys** — machine-to-machine auth via `X-API-Key` or `Authorization: ApiKey`
+- Admin UI: **Cron Jobs**, **Webhooks**, **API Keys** (Automation section)
+
+### Changed
+- `optionalAuth` / `authenticate` accept API keys alongside JWT
+- OpenAPI spec includes versioned paths and API key security scheme
+
+## [1.2.0] - 2026-06-18
+
+### Added
+- **OpenAPI / Swagger** — auto-generated spec at `/api/openapi.json` and interactive UI at `/api/swagger`
+- **Project export/import** — download/upload `project.json` from Settings (endpoint groups, endpoints, optional data & settings)
+- **JavaScript handlers** — `async function handler(req, db)` on endpoints; replaces default CRUD when enabled; no restart required
+- Admin UI: **API Docs** page (`/api-docs`), **Handler** tab in endpoint editor
+
+### Changed
+- OpenAPI, Swagger, and project routes excluded from dynamic engine catch-all
+
+## [1.1.0] - 2026-06-18
+
+### Added
 - **`reference` schema field type** — link records between endpoints (foreign keys)
   - Target endpoint selector in the schema editor (**Linked endpoint**)
   - Validation on create/update: referenced record must exist in the target collection
@@ -21,29 +142,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable on **endpoint groups** and individual **endpoints** (Network Access tab/section)
   - Group inheritance with merged rules; enforced at runtime before JWT access-type checks
   - Admin tester can simulate client IP and `Origin` header
-- Documentation: zero-downtime API creation (no server restart on new routes), comparison with Strapi/Directus
+- **API Schema** — read-only ER diagram of endpoints, groups, and reference links (`/api-schema`)
+- **Light theme** — slate + cyan UI aligned with WASH-PHO-CRM dashboard; toggle in header
+- Documentation: [Network Access](docs/network-access.md), [Database Explorer](docs/database.md), [API Schema](docs/api-schema.md)
 - Session handling: centralized `UnauthorizedError` and auth state sync on token expiry
-
-### Fixed
-
-- **Session expiry UX** — expired or invalid tokens redirect to `/login` instead of showing "Failed to load dashboard"
-- **JWT refresh bug** — access tokens issued after refresh had empty `permissions` when user groups were populated from MongoDB
-- **System endpoint tester** — built-in test for `/api/users`, `/api/groups`, `/api/profile` now calls real management APIs with RBAC (was incorrectly routed through the dynamic engine with `Forbidden: insufficient group permissions`)
-- **Dynamic engine** — GET/PUT/DELETE on paths with parameters (e.g. `/api/products/:id`) now resolve records using the collection base path
-- Broken images in `docs/screenshots.md` on GitHub (use raw.githubusercontent.com URLs)
+- Zero-downtime API creation documented (no server restart on new routes); comparison with Strapi/Directus
 
 ### Changed
-
 - License changed from MIT to **Apache License 2.0**
+- GitHub Pages and repository URLs migrated to `Dynamic-API-Platform` organization
+- Admin UI layout: top header bar with user info, theme toggle, and logout
 - System endpoints **List Users** and **List Groups**: `accessType` set to `authenticated` (documented as management API; RBAC enforced on the real route)
 - Seed migration: existing system endpoints get updated `accessType` and descriptions on backend startup
 
-### Planned
-
-- OpenAPI/Swagger export for dynamic endpoints
-- Webhook notifications on endpoint events
-- Multi-tenant workspace support
-- Endpoint versioning
+### Fixed
+- **Session expiry UX** — expired or invalid tokens redirect to `/login` instead of showing "Failed to load dashboard"
+- **JWT refresh bug** — access tokens issued after refresh had empty `permissions` when user groups were populated from MongoDB
+- **System endpoint tester** — built-in test for `/api/users`, `/api/groups`, `/api/profile` now calls real management APIs with RBAC
+- **Dynamic engine** — GET/PUT/DELETE on paths with parameters (e.g. `/api/products/:id`) now resolve records using the collection base path
+- Broken images in `docs/screenshots.md` on GitHub (use raw.githubusercontent.com URLs)
+- Nginx `proxy_pass` in frontend container — full API paths (e.g. `/api/auth/login`) now reach backend
 
 ## [1.0.0] - 2026-06-18
 
@@ -115,4 +233,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Default endpoint groups
 - CRM, SHOP, DEVICES
 
-[1.0.0]: https://github.com/Developer-RU/Dynamic-API-Platform/releases/tag/v1.0.0
+[1.5.6]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.6
+[1.5.5]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.5
+[1.5.3]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.3
+[1.5.2]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.2
+[1.5.1]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.1
+[1.5.0]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.0
+[1.4.0]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.4.0
+[1.3.0]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.3.0
+[1.2.0]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.2.0
+[1.1.0]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.1.0
+[1.0.0]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.0.0

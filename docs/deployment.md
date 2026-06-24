@@ -27,15 +27,22 @@ docker compose up -d --build
 
 ## Обновление
 
+### Dynamic API Platform (vendored)
+
 ```bash
-# Обновить vendored Dynamic API Platform
 ./scripts/update-dynamic-api.sh
+docker compose up -d --build dynamic-api dynamic-api-panel
+./scripts/run-init-seed.sh   # при изменениях схемы API
+```
 
-# Пересобрать стек
+Актуальная версия встроенной платформы: **v1.5.6** (см. `dynamic-api/CHANGELOG.md`).
+
+> **Важно:** в панели Dynamic API (`:8080`) может отображаться раздел Software Updates. В WASH-PHO-CRM in-app updater **отключён** — он предназначен для standalone-развёртывания. Используйте `./scripts/update-dynamic-api.sh` в корне репозитория.
+
+### Весь стек WASH-PHO-CRM
+
+```bash
 docker compose up -d --build
-
-# При необходимости — повторная инициализация endpoints
-./scripts/run-init-seed.sh
 ```
 
 Данные сохраняются в Docker volumes и не теряются при пересборке.

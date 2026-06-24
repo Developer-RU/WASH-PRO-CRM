@@ -1,26 +1,31 @@
 # Screenshots
 
-Визуальный обзор интерфейса **Dynamic API Platform**.
+Визуальный обзор интерфейса **Dynamic API Platform v1.5**.
 
-Полная галерея с описаниями: [docs/screenshots.md](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/docs/screenshots.md)  
-Онлайн-документация: [Screenshots](https://developer-ru.github.io/Dynamic-API-Platform/screenshots/)
+- Полная галерея: [docs/screenshots.md](docs/screenshots.md)
+- Онлайн: [GitHub Pages](https://dynamic-api-platform.github.io/Dynamic-API-Platform/screenshots/)
+- Пересъёмка: `npm run screenshots` (нужен запущенный `http://localhost:8080`)
 
-## Login
+## Login & Dashboard
 
-![Login](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/login.png)
+| Login | Dashboard |
+|-------|-----------|
+| ![](docs/screenshots/login.png) | ![](docs/screenshots/dashboard.png) |
 
-## Dashboard
+## Endpoints & Automation
 
-![Dashboard](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/dashboard.png)
+| Endpoints | MCP Server | Cron Jobs |
+|-----------|------------|-----------|
+| ![](docs/screenshots/endpoints.png) | ![](docs/screenshots/mcp-server.png) | ![](docs/screenshots/cron-jobs.png) |
 
-## Endpoints
+## API Schema, Docs, Handler
 
-![Endpoints](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/endpoints.png)
+| API Schema | API Docs | Handler tab |
+|------------|----------|-------------|
+| ![](docs/screenshots/api-schema.png) | ![](docs/screenshots/api-docs.png) | ![](docs/screenshots/endpoint-handler.png) |
 
-## Settings
+## Database, Logs, Settings, System
 
-![Settings](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/settings.png)
-
-## System
-
-![System](https://raw.githubusercontent.com/Developer-RU/Dynamic-API-Platform/main/docs/screenshots/system.png)
+| Database | Logs | Settings | System |
+|----------|------|----------|--------|
+| ![](docs/screenshots/database.png) | ![](docs/screenshots/logs.png) | ![](docs/screenshots/settings.png) | ![](docs/screenshots/system.png) |

@@ -39,7 +39,7 @@ layout: default
 
 | Компонент | Технология |
 |-----------|------------|
-| API | Dynamic API Platform (Node.js + MongoDB) |
+| API | Dynamic API Platform **v1.5.6** (Node.js + MongoDB) |
 | Dashboard | React + TypeScript + Vite |
 | Очередь | RabbitMQ |
 | Обработка телеметрии | message-processor (Node.js) |

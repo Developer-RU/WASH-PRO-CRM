@@ -1,4 +1,5 @@
 import { SystemSettings } from '../models';
+import { getAppVersion } from './update-settings.service';
 
 export interface AppSettings {
   appName: string;
@@ -19,7 +20,7 @@ export interface AppSettings {
 
 const DEFAULTS: AppSettings = {
   appName: 'Dynamic API Platform',
-  version: '1.0.0',
+  version: getAppVersion(),
   defaultTheme: 'dark',
   rateLimitMax: 1000,
   rateLimitWindowMs: 900000,
@@ -76,7 +77,7 @@ export class SettingsService {
   private cache: AppSettings = { ...DEFAULTS };
 
   getCached(): AppSettings {
-    return { ...this.cache };
+    return { ...this.cache, version: getAppVersion() };
   }
 
   async load(): Promise<AppSettings> {
@@ -90,6 +91,7 @@ export class SettingsService {
       }
     }
 
+    settings.version = getAppVersion();
     this.cache = settings;
     return settings;
   }

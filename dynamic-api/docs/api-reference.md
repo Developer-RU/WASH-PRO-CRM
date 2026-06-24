@@ -165,13 +165,31 @@ Permission: `manage_api` or `view`
   "accessType": "authenticated",
   "groupId": "optional-group-id",
   "schema": [
-    { "name": "title", "type": "string", "required": true, "order": 0 }
+    { "name": "title", "type": "string", "required": true, "order": 0 },
+    { "name": "categoryId", "type": "reference", "refEndpointId": "<target-endpoint-id>", "order": 1 }
   ],
+  "networkAccess": {
+    "enabled": true,
+    "allowedDomains": ["app.example.com", "*.example.com"],
+    "allowedIpRanges": ["10.0.0.0/8", "203.0.113.50"]
+  },
+  "inheritGroupNetworkAccess": true,
   "enabled": true
 }
 ```
 
+| Field | Description |
+|-------|-------------|
+| `networkAccess.enabled` | Enable domain/IP filtering for this endpoint |
+| `networkAccess.allowedDomains` | Allowed hostnames (`Origin` / `Referer` / `Host`) |
+| `networkAccess.allowedIpRanges` | IPv4 addresses or CIDR blocks |
+| `inheritGroupNetworkAccess` | Merge with parent group rules when `true` (default) |
+
+See [Network Access]({{ '/network-access/' | relative_url }}).
+
 ### PUT `/api/endpoints/:id`
+
+Same fields as POST (all optional).
 
 ### DELETE `/api/endpoints/:id`
 
@@ -189,7 +207,24 @@ Auto-generated documentation object.
 
 Execute endpoint internally for testing.
 
-**Body:** `{ "body": { ... } }` (for POST/PUT/PATCH)
+**Body:**
+```json
+{
+  "body": { "name": "Test" },
+  "headers": { "Origin": "https://app.example.com" },
+  "clientIp": "203.0.113.10",
+  "applyNetworkAccess": true
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `body` | Request body for POST/PUT/PATCH |
+| `headers` | Optional headers (e.g. simulate `Origin`) |
+| `clientIp` | Simulated client IP for network rule checks |
+| `applyNetworkAccess` | When `true`, enforce network access rules during test |
+
+By default, network rules are **skipped** in the tester so admins can debug freely.
 
 ---
 
@@ -199,7 +234,23 @@ Execute endpoint internally for testing.
 
 ### POST `/api/endpoints/groups`
 
-**Body:** `{ name, description?, icon?, color?, order? }`
+**Body:**
+```json
+{
+  "name": "Internal",
+  "description": "Internal APIs",
+  "icon": "folder",
+  "color": "#0891b2",
+  "order": 0,
+  "networkAccess": {
+    "enabled": true,
+    "allowedDomains": ["app.example.com"],
+    "allowedIpRanges": ["10.0.0.0/8"]
+  }
+}
+```
+
+Group-level `networkAccess` applies to all endpoints in the group that inherit rules (default).
 
 ### PUT `/api/endpoints/groups/:id`
 
@@ -213,13 +264,13 @@ Execute endpoint internally for testing.
 
 Permission: `view`
 
-Returns users, endpoints, requests, errors counts and 7-day charts.
+Returns users, endpoints, requests/errors (last 7 days), automation counts (cron, webhooks, API keys, MCP tools), 7-day charts (requests, errors, logins, webhook deliveries, cron runs, traffic by source), and `automationHealth` (failed cron jobs, webhook errors, unused API keys).
 
 ### GET `/api/dashboard/system`
 
 Permission: `view`
 
-Server OS, CPU, memory, disk, network info.
+Server OS, CPU, memory, disk, network info, plus `cronJobsActive` and `cronJobsTotal`.
 
 ### GET `/api/dashboard/logs`
 
@@ -228,8 +279,8 @@ Permission: `view_logs`
 | Query | Description |
 |-------|-------------|
 | `page`, `limit` | Pagination |
-| `action` | Filter: `login`, `error`, `api_call`, etc. |
-| `search` | Search message, action, IP |
+| `action` | Filter: `login`, `error`, `api_call`, `webhook_dispatch`, `cron_run`, `mcp_call`, `api_key_used`, etc. |
+| `search` | Search message, action, source, IP |
 
 ---
 

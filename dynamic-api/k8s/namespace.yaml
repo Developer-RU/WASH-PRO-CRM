@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dap
+  labels:
+    app.kubernetes.io/name: dynamic-api-platform
+    app.kubernetes.io/part-of: dap

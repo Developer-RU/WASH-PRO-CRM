@@ -25,8 +25,8 @@ services:
   # ===========================================================================
   dynamic-api:
     build:
-      context: ./dynamic-api/backend
-      dockerfile: Dockerfile
+      context: ./dynamic-api
+      dockerfile: backend/Dockerfile
     container_name: wash-dynamic-api
     restart: unless-stopped
     ports:
@@ -46,6 +46,8 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wash-crm.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
       ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
+      APP_VERSION: ${DYNAMIC_API_VERSION:-1.5.6}
+      UPDATE_EXECUTOR_ENABLED: ${UPDATE_EXECUTOR_ENABLED:-false}
     depends_on:
       mongodb:
         condition: service_healthy

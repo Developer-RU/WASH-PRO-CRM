@@ -6,12 +6,14 @@
 
 **Open-source platform for creating, managing, and testing REST APIs without writing backend code.**
 
+[![Release](https://img.shields.io/github/v/release/Dynamic-API-Platform/Dynamic-API-Platform?label=v1.5.6)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.6)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&logoColor=white)](k8s/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](backend/package.json)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](frontend/package.json)
 
-[Documentation](https://developer-ru.github.io/Dynamic-API-Platform/) · [Quick Start](#quick-start) · [Screenshots](#screenshots) · [Features](#features) · [Issues](https://github.com/Developer-RU/Dynamic-API-Platform/issues)
+[Documentation](https://dynamic-api-platform.github.io/Dynamic-API-Platform/) · [Wiki](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/wiki) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Screenshots](#screenshots) · [Issues](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/issues)
 
 ---
 
@@ -19,34 +21,22 @@
 
 Dynamic API Platform lets you define REST endpoints through a web admin panel, attach JSON schemas, configure access control, and serve data instantly — powered by MongoDB and a runtime API engine.
 
-**New endpoints go live the moment you save them** — no server restart, no process reload, and no redeploy. Route definitions are stored in MongoDB and resolved on every request, so the API surface can grow and change while the server keeps running.
+**New endpoints go live the moment you save them** — no server restart, no process reload, and no redeploy. Route definitions are stored in MongoDB and resolved on every request.
 
-Perfect for prototyping, internal tools, lightweight BaaS, and teams who need APIs fast without boilerplate.
+Perfect for prototyping, internal tools, lightweight BaaS, AI agent backends (MCP), and teams who need APIs fast without boilerplate.
 
 ### What makes it different
 
-Unlike traditional headless CMS platforms (e.g. **Strapi**, **Directus**) or hand-written Express/Fastify apps, where new APIs often mean code changes, builds, or server restarts, Dynamic API Platform treats endpoints as **runtime configuration**:
-
 | | Dynamic API Platform | Typical CMS / custom backend |
 |--|----------------------|------------------------------|
-| Add a REST endpoint | Save in admin UI → immediately callable | Edit code or content model → rebuild and/or restart |
+| Add a REST endpoint | Save in admin UI → immediately callable | Edit code → rebuild and/or restart |
 | Change path or schema | Update in UI, takes effect instantly | Redeploy or restart workers |
 | Server downtime | None for API changes | Often required |
-
-This zero-downtime, database-driven routing is the platform’s core differentiator — a true dynamic API engine, not a static route table compiled at startup.
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│   Backend   │────▶│   MongoDB   │
-│  React+TS   │     │ Express+TS  │     │             │
-│  Port 8080  │     │  Port 3001  │     │  Port 27017 │
-└─────────────┘     └─────────────┘     └─────────────┘
-```
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
+git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 docker compose up -d
 ```
@@ -59,62 +49,79 @@ docker compose up -d
 
 **Default login:** `admin` / `Admin123!` — change immediately in production.
 
+## Deployment
+
+Three options — [full comparison](docs/deployment-variants.md):
+
+| Variant | Command | Use case |
+|---------|---------|----------|
+| **1. Docker (single)** | `docker compose up -d` | Dev, demos, simple prod |
+| **2. Docker replica set** | `docker compose -f docker-compose.replica.yml up -d` | HA MongoDB on Docker |
+| **3. Kubernetes** | `./k8s/scripts/deploy.sh` | K8s cluster, scaled backend |
+
+```bash
+npm run docker:replica:up    # variant 2
+npm run k8s:deploy           # variant 3
+```
+
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="720" />
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard with automation KPIs and charts" width="720" />
 </p>
 
 <p align="center">
-  <a href="docs/screenshots.md">View all screenshots</a> (login, endpoints, settings, system)
+  <a href="docs/screenshots.md">Full gallery</a> — login, endpoints, MCP, cron, webhooks, API keys, logs, settings, system
 </p>
+
+Regenerate from a running instance: `npm run screenshots`
 
 ## Features
 
 ### Dynamic API Engine
-- Create REST endpoints (GET/POST/PUT/PATCH/DELETE) via UI — **live immediately, no server restart or redeploy**
-- **`reference` fields** — link records between endpoints (foreign keys) with validation and optional `?populate=`
-- Schema builder: `string`, `number`, `boolean`, `object`, `array`, `datetime`, `json`, `reference`
-- Path parameters (`/api/items/:id`), validation, default values
-- **Network access** — restrict callers by allowed domains and IP/CIDR pools (group + endpoint level)
-- Built-in API tester and auto-generated documentation
+- REST endpoints (GET/POST/PUT/PATCH/DELETE) via UI — **live immediately**
+- **`reference` fields** — foreign keys with `?populate=`
+- Schema builder, path params, validation, **network access** (domains / IP pools)
+- Built-in API tester and OpenAPI / Swagger docs
+
+### Automation & integrations
+- **Cron jobs** — scheduled JavaScript, HTTP, or endpoint actions
+- **Webhooks** — outbound events with optional HMAC
+- **API keys** — machine-to-machine auth
+- **MCP server** — expose endpoints as AI agent tools (`POST /api/mcp`, admin UI at `/mcp`)
+- **JavaScript handlers** — custom `async function handler(req, db)` per endpoint
+- **API versioning** — optional `/api/v1/...` paths
 
 ### Security
-- JWT authentication with refresh tokens
-- RBAC with 5 system groups + custom groups
-- **Network access rules** for dynamic endpoints (domains, IP pools)
-- Login lockout, API rate limiting, audit logs
-- Helmet, CORS, CSRF token endpoint, bcrypt passwords
+- JWT + refresh tokens, RBAC (5 system groups + custom)
+- Network access rules, rate limiting, login lockout, audit logs
+- Helmet, CORS, CSRF, bcrypt
 
 ### Admin Panel
-- Dashboard with charts (requests, errors, user activity)
-- Grouped endpoint tables with search and filters
-- Users & groups management with pagination
-- **Database Explorer** — raw MongoDB JSON browser/editor (manage_users)
-- System monitoring (CPU, memory, disk, network)
-- Settings: auth, rate limits, log retention, pagination
+- **Dashboard** — automation KPIs, request/error charts, health widget
+- Endpoints, groups, **API Schema** (ER diagram), **Database Explorer**
+- Users, groups, **audit logs** with source filters
+- System monitoring, settings (export/import), light/dark themes
 
-### DevOps
-- One-command Docker Compose deployment
+### DevOps & software updates
+- Docker Compose with **in-app updates enabled by default** (local PC or VPS)
+- **Software updates** — GitHub release checks, **Update now**, scheduled auto-update, rollback — [docs/updates.md](docs/updates.md)
+- **MongoDB replica set**, **Kubernetes** manifests
+- Vitest unit tests (30), load test, GitHub Actions CI
 - Health checks, persistent volumes, nginx API proxy
-- GitHub Actions CI, GitHub Pages docs
+- [GitHub Pages](https://dynamic-api-platform.github.io/Dynamic-API-Platform/) docs + [Wiki](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/wiki)
 
 ## Example
 
 ```bash
-# Get token
 TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"login":"admin","password":"Admin123!"}' | jq -r '.data.accessToken')
 
-# Create product via dynamic API
 curl -X POST http://localhost:3001/api/products \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Laptop","price":999}'
-
-# List products
-curl http://localhost:3001/api/products -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Documentation
@@ -122,90 +129,84 @@ curl http://localhost:3001/api/products -H "Authorization: Bearer $TOKEN"
 | Document | Description |
 |----------|-------------|
 | [Getting Started](docs/getting-started.md) | Installation and first endpoint |
+| [Deployment Variants](docs/deployment-variants.md) | Docker / replica set / Kubernetes |
 | [Architecture](docs/architecture.md) | System design and data flow |
-| [API Reference](docs/api-reference.md) | All management endpoints |
-| [RBAC](docs/rbac.md) | Permissions and access control |
-| [Dynamic Engine](docs/dynamic-api-engine.md) | How runtime APIs work |
-| [Network Access](docs/network-access.md) | Domain and IP/CIDR restrictions |
-| [Database Explorer](docs/database.md) | Raw MongoDB admin UI and API |
-| [Deployment](docs/deployment.md) | Production setup |
-| [Configuration](docs/configuration.md) | Environment variables |
+| [Automation](docs/automation.md) | Cron, webhooks, MCP, API keys, handlers |
+| [API Reference](docs/api-reference.md) | Management REST API |
+| [Testing](docs/testing.md) | Unit tests, load test, CI |
+| [Kubernetes](docs/kubernetes.md) | K8s deploy guide |
+| [MongoDB Replica Set](docs/mongodb-replica-set.md) | 3-node Docker replica set |
+| [Software Updates](docs/updates.md) | In-app updates from GitHub Releases |
 | [FAQ](docs/faq.md) | Common questions |
-| [Screenshots](docs/screenshots.md) | UI gallery |
 
-**Online docs:** https://developer-ru.github.io/Dynamic-API-Platform/
+**Online:** https://dynamic-api-platform.github.io/Dynamic-API-Platform/
 
 ## Project Structure
 
 ```
-├── docker-compose.yml      # Docker orchestration
-├── .env.example            # Environment template
-├── docs/                   # GitHub Pages documentation
-├── wiki/                   # GitHub Wiki mirror
-├── backend/
-│   └── src/
-│       ├── models/         # Mongoose schemas
-│       ├── repositories/   # Data access layer
-│       ├── services/       # Business logic
-│       ├── routes/         # Express routes
-│       ├── middleware/     # Auth, RBAC, rate limit
-│       └── seed/           # Initial data
-└── frontend/
-    └── src/
-        ├── pages/          # Admin panel pages
-        ├── components/     # UI components
-        └── services/       # API client
+├── docker-compose.yml           # Variant 1 — single MongoDB
+├── docker-compose.replica.yml   # Variant 2 — 3-node replica set
+├── k8s/                         # Variant 3 — Kubernetes manifests
+├── scripts/capture-screenshots.mjs
+├── docs/                        # GitHub Pages documentation
+├── wiki/                        # GitHub Wiki mirror
+├── backend/src/                 # Express API, services, models
+└── frontend/src/                # React admin panel
 ```
 
 ## Local Development
 
 ```bash
-# MongoDB
 docker run -d -p 27017:27017 mongo:7
-
-# Backend (port 3001)
-cd backend && npm install && npm run dev
-
-# Frontend (port 5173)
-cd frontend && npm install && npm run dev
+cd backend && npm install && npm run dev    # :3001
+cd frontend && npm install && npm run dev   # :5173
 ```
 
-See [Development Guide](docs/development.md) for details.
+See [Development Guide](docs/development.md).
+
+## Testing
+
+```bash
+cd backend
+npm test                 # Vitest — 30 tests, no MongoDB required
+npm run test:load        # autocannon — backend must be running
+```
+
+CI runs `npm test` + build on every push. Details: [docs/testing.md](docs/testing.md).
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `JWT_SECRET` | *(change me)* | JWT signing secret |
-| `MONGODB_URI` | `mongodb://mongodb:27017/dynamic_api` | Database URL |
+| `MONGODB_URI` | `mongodb://mongodb:27017/dynamic_api` | DB URL (see `.env.example` for replica set) |
 | `CORS_ORIGIN` | `http://localhost:8080` | Frontend origin |
-| `ADMIN_LOGIN` | `admin` | Seed admin login |
-| `ADMIN_PASSWORD` | `Admin123!` | Seed admin password |
+| `ADMIN_LOGIN` / `ADMIN_PASSWORD` | `admin` / `Admin123!` | Seed admin |
 
-Full list: [.env.example](.env.example) · [Configuration docs](docs/configuration.md)
+Full list: [.env.example](.env.example)
 
 ## Contributing
 
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-
-## Security
-
-Report vulnerabilities privately — see [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+**[v1.5.6](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.6)** (latest) — docs, GitHub Pages, wiki, and org profile synced.
 
-### Recent updates (Unreleased)
+**[v1.5.5](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.5)** — fix stuck update jobs, updater bash crash, cancel button.
 
-- **`reference` schema fields** — foreign keys between endpoints, `?populate=` on GET
-- **Network access** — allowed domains and IP/CIDR pools on endpoints and endpoint groups
-- **Database Explorer** — raw MongoDB UI at `/database` and `/api/database/*` API
-- **Zero-downtime routing** — new endpoints without server restart
-- **Auth fixes** — session redirect to login, JWT refresh permissions
-- **System endpoint tester** — correct RBAC for `/api/users`, `/api/groups`, `/api/profile`
-- **License** — Apache 2.0
+**[v1.5.3](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.3)** — fix update snapshot hang, correct version on System page.
+
+**[v1.5.2](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.2)** — auto-update out of the box in Docker, Update now button, archive deploy support.
+
+**[v1.5.1](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.1)** — hotfix: startup seed for update settings.
+
+**[v1.5.0](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.0)** — in-app software updates (GitHub releases, notifications, optional auto-update with rollback).
+
+**[v1.4.0](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.4.0)** — deployment variants (Docker replica set, K8s), testing suite, dashboard automation observability, strict validation, refreshed screenshots.
+
+Full history: [CHANGELOG.md](CHANGELOG.md)
 
 ## License
 
-[Apache License 2.0](LICENSE) © 2026 Developer-RU
+[Apache License 2.0](LICENSE) © 2026 Dynamic API Platform

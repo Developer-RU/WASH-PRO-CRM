@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-init-scripts
+  namespace: dap
+  labels:
+    app.kubernetes.io/name: mongo
+    app.kubernetes.io/component: database
+data:
+  replica-init.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    RS_ID="${MONGO_REPLICA_SET_ID:-rs0}"
+    PRIMARY_HOST="${MONGO_PRIMARY_HOST:-mongo-0.mongo-headless:27017}"
+    MEMBER2_HOST="${MONGO_MEMBER2_HOST:-mongo-1.mongo-headless:27017}"
+    MEMBER3_HOST="${MONGO_MEMBER3_HOST:-mongo-2.mongo-headless:27017}"
+    MAX_ATTEMPTS=90
+    SLEEP_SEC=2
+
+    echo "Waiting for MongoDB nodes..."
+    for host in "$PRIMARY_HOST" "$MEMBER2_HOST" "$MEMBER3_HOST"; do
+      node="${host%%:*}"
+      attempt=0
+      until mongosh --host "$host" --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; do
+        attempt=$((attempt + 1))
+        if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
+          echo "Timeout waiting for $host"
+          exit 1
+        fi
+        sleep "$SLEEP_SEC"
+      done
+      echo "  $node is up"
+    done
+
+    echo "Checking replica set status..."
+    STATUS=$(mongosh --host "$PRIMARY_HOST" --quiet --eval '
+      try {
+        const s = rs.status();
+        print(s.ok);
+      } catch (e) {
+        print(0);
+      }
+    ' || echo 0)
+
+    if [ "$STATUS" = "1" ]; then
+      echo "Replica set '$RS_ID' already initialized"
+      mongosh --host "$PRIMARY_HOST" --quiet --eval 'rs.status().members.map(m => m.name + " -> " + m.stateStr).join("\n")'
+      exit 0
+    fi
+
+    echo "Initializing replica set '$RS_ID'..."
+    mongosh --host "$PRIMARY_HOST" --quiet --eval "
+    rs.initiate({
+      _id: '$RS_ID',
+      members: [
+        { _id: 0, host: '$PRIMARY_HOST' },
+        { _id: 1, host: '$MEMBER2_HOST' },
+        { _id: 2, host: '$MEMBER3_HOST' }
+      ]
+    });
+    "
+
+    echo "Waiting for PRIMARY election..."
+    attempt=0
+    until mongosh --host "$PRIMARY_HOST" --quiet --eval "
+      const s = rs.status();
+      if (s.members.some(m => m.stateStr === 'PRIMARY')) { quit(0); }
+      quit(1);
+    " >/dev/null 2>&1; do
+      attempt=$((attempt + 1))
+      if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
+        echo "Timeout waiting for PRIMARY"
+        exit 1
+      fi
+      sleep "$SLEEP_SEC"
+    done
+
+    echo "Replica set ready:"
+    mongosh --host "$PRIMARY_HOST" --quiet --eval 'rs.status().members.forEach(m => print(m.name + " -> " + m.stateStr))'

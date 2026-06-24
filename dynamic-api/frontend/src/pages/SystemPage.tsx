@@ -81,6 +81,23 @@ export default function SystemPage() {
         <InfoCard icon={Clock} label="Uptime" value={formatUptime(info.uptime)} sub={`Node ${info.nodeVersion}`} color="#10b981" />
       </div>
 
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <InfoCard
+          icon={Clock}
+          label="Cron Scheduler"
+          value={`${info.cronJobsActive} active`}
+          sub={`${info.cronJobsTotal} total jobs`}
+          color="#8b5cf6"
+        />
+        <InfoCard
+          icon={Server}
+          label="Auto-update"
+          value={info.updateExecutorReady ? 'Ready' : 'Unavailable'}
+          sub={`Deploy: ${info.deployMode}`}
+          color={info.updateExecutorReady ? '#10b981' : '#f59e0b'}
+        />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
@@ -172,7 +189,7 @@ export default function SystemPage() {
           </div>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-dark-muted">Name</span><span>{info.appName}</span></div>
-            <div className="flex justify-between"><span className="text-dark-muted">Version</span><span className="badge-blue">{info.appVersion}</span></div>
+            <div className="flex justify-between"><span className="text-dark-muted">Version</span><span className="badge-blue">v{info.appVersion}</span></div>
             <div className="flex justify-between"><span className="text-dark-muted">Environment</span><span className="badge-yellow">{info.environment}</span></div>
             <div className="flex justify-between"><span className="text-dark-muted">Platform</span><span>{info.platform}</span></div>
           </div>

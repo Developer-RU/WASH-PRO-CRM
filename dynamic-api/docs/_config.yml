@@ -1,6 +1,6 @@
 title: Dynamic API Platform
 description: Create, manage and test dynamic REST APIs without writing code
-url: https://developer-ru.github.io
+url: https://dynamic-api-platform.github.io
 baseurl: /Dynamic-API-Platform
 
 markdown: GFM
@@ -22,6 +22,8 @@ exclude:
 nav:
   - title: Home
     url: /
+  - title: Why DAP
+    url: /overview/
   - title: Getting Started
     url: /getting-started/
   - title: Architecture
@@ -32,16 +34,30 @@ nav:
     url: /rbac/
   - title: Dynamic Engine
     url: /dynamic-api-engine/
+  - title: API Schema
+    url: /api-schema/
   - title: Database Explorer
     url: /database/
   - title: Network Access
     url: /network-access/
+  - title: Automation
+    url: /automation/
   - title: Deployment
     url: /deployment/
+  - title: Deployment Variants
+    url: /deployment-variants/
+  - title: MongoDB Replica Set
+    url: /mongodb-replica-set/
+  - title: Kubernetes
+    url: /kubernetes/
   - title: Configuration
     url: /configuration/
+  - title: Software Updates
+    url: /updates/
   - title: Development
     url: /development/
+  - title: Testing
+    url: /testing/
   - title: Screenshots
     url: /screenshots/
   - title: FAQ

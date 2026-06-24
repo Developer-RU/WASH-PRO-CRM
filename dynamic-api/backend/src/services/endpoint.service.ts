@@ -9,19 +9,26 @@ import {
   validateDataAgainstSchema,
   validateReferences,
   applyDefaults,
+  pickSchemaData,
   generateExamples,
   matchDynamicPath,
   getCollectionPath,
+  getEndpointMatchPaths,
   normalizeNetworkAccessInput,
   validateNetworkAccessInput,
   resolveEffectiveNetworkAccess,
   checkNetworkAccess,
 } from '../utils';
+import { resolveLogSource, shouldSkipApiAuditLog } from '../utils/logSource';
+import { resolveLogUserId, compactLogEntry } from '../utils/auditLog';
+import { LogSource } from '../types';
 import { CreateEndpointDto, UpdateEndpointDto, CreateEndpointGroupDto, UpdateEndpointGroupDto, TestEndpointDto } from '../dto';
 import { IEndpoint } from '../models';
 import { JwtPayload, HttpMethod, TestEndpointResult, Permission, SchemaField, NetworkAccessRules } from '../types';
 import { authService } from './auth.service';
 import { userService, groupService } from './user.service';
+import { handlerRuntime } from './handler-runtime.service';
+import { webhookService } from './webhook.service';
 
 function assertAnyPermission(user: JwtPayload | undefined, ...permissions: Permission[]): asserts user is JwtPayload {
   if (!user) throw new Error('Unauthorized');
@@ -140,6 +147,7 @@ export class EndpointService {
       slug: dto.slug,
       path,
       method,
+      apiVersion: dto.apiVersion?.trim() || undefined,
       groupId: dto.groupId as unknown as import('mongoose').Types.ObjectId,
       fields: (dto.schema || []).map((f, i) => ({
         name: f.name,
@@ -157,7 +165,7 @@ export class EndpointService {
       inheritGroupNetworkAccess: dto.inheritGroupNetworkAccess ?? true,
       handlers: (dto.handlers || []).map((h) => ({
         name: h.name,
-        type: h.type as 'pre' | 'post' | 'transform',
+        type: h.type as 'pre' | 'post' | 'transform' | 'javascript',
         code: h.code,
         enabled: h.enabled ?? true,
       })),
@@ -171,6 +179,14 @@ export class EndpointService {
       userId: userId as unknown as import('mongoose').Types.ObjectId,
       endpointId: endpoint._id,
       message: `Endpoint ${endpoint.name} (${method} ${path}) created`,
+    });
+
+    void webhookService.dispatch('endpoint.created', {
+      endpointId: endpoint._id.toString(),
+      name: endpoint.name,
+      path: endpoint.path,
+      method: endpoint.method,
+      apiVersion: endpoint.apiVersion,
     });
 
     return endpoint;
@@ -187,6 +203,7 @@ export class EndpointService {
     if (dto.slug !== undefined) updateData.slug = dto.slug;
     if (dto.path !== undefined) updateData.path = normalizePath(dto.path);
     if (dto.method !== undefined) updateData.method = dto.method.toUpperCase();
+    if (dto.apiVersion !== undefined) updateData.apiVersion = dto.apiVersion?.trim() || undefined;
     if (dto.groupId !== undefined) updateData.groupId = dto.groupId;
     if (dto.accessType !== undefined) updateData.accessType = dto.accessType;
     if (dto.allowedGroupIds !== undefined) updateData.allowedGroupIds = dto.allowedGroupIds;
@@ -225,6 +242,13 @@ export class EndpointService {
       message: `Endpoint ${endpoint.name} updated`,
     });
 
+    void webhookService.dispatch('endpoint.updated', {
+      endpointId: id,
+      name: updated?.name || endpoint.name,
+      path: updated?.path || endpoint.path,
+      method: updated?.method || endpoint.method,
+    });
+
     return updated;
   }
 
@@ -241,6 +265,13 @@ export class EndpointService {
       userId: userId as unknown as import('mongoose').Types.ObjectId,
       endpointId: endpoint._id,
       message: `Endpoint ${endpoint.name} deleted`,
+    });
+
+    void webhookService.dispatch('endpoint.deleted', {
+      endpointId: id,
+      name: endpoint.name,
+      path: endpoint.path,
+      method: endpoint.method,
     });
   }
 
@@ -282,7 +313,7 @@ export class EndpointService {
     };
 
     try {
-      const result = endpoint.isSystem
+      const raw = endpoint.isSystem
         ? await executeSystemEndpoint(endpoint, mockReq)
         : await dynamicEngine.execute(endpoint, mockReq, {
             skipNetworkCheck: dto.applyNetworkAccess !== true,
@@ -291,6 +322,12 @@ export class EndpointService {
               headers: dto.headers,
             },
           });
+      const isHandlerResponse =
+        raw && typeof raw === 'object' && '__handlerResponse' in (raw as object);
+      const statusCode = isHandlerResponse
+        ? Number((raw as { statusCode: number }).statusCode) || 200
+        : 200;
+      const body = isHandlerResponse ? (raw as { body: unknown }).body : raw;
       const responseTime = Date.now() - startTime;
 
       return {
@@ -302,9 +339,9 @@ export class EndpointService {
           params: dto.params,
         },
         response: {
-          statusCode: 200,
+          statusCode,
           headers: { 'content-type': 'application/json' },
-          body: result,
+          body,
           responseTime,
         },
       };
@@ -368,9 +405,12 @@ export class DynamicEngine {
     const endpoints = await endpointRepository.findDynamicEndpoints();
 
     for (const endpoint of endpoints) {
-      const { match, params } = matchDynamicPath(endpoint.path, requestPath);
-      if (match && endpoint.method === method.toUpperCase()) {
-        return { endpoint, params };
+      const paths = getEndpointMatchPaths(endpoint.path, endpoint.apiVersion);
+      for (const epPath of paths) {
+        const { match, params } = matchDynamicPath(epPath, requestPath);
+        if (match && endpoint.method === method.toUpperCase()) {
+          return { endpoint, params };
+        }
       }
     }
 
@@ -475,9 +515,31 @@ export class DynamicEngine {
     this.checkAccess(endpoint, req.user);
 
     const params = req.params || {};
+    const collectionPath = getCollectionPath(endpoint.path);
+
+    const jsHandler = endpoint.handlers?.find(
+      (h) => h.type === 'javascript' && h.enabled && h.code?.trim()
+    );
+    if (jsHandler?.code) {
+      const result = await handlerRuntime.run(
+        jsHandler.code,
+        {
+          method: req.method,
+          path: req.path,
+          params,
+          query: req.query || {},
+          body: req.body,
+          user: req.user,
+          headers: options?.networkMeta?.headers || {},
+        },
+        endpoint._id.toString(),
+        collectionPath
+      );
+      return { __handlerResponse: true, statusCode: result.statusCode, body: result.body };
+    }
+
     const hasIdParam = Object.keys(params).length > 0;
     const idParam = params.id || Object.values(params)[0];
-    const collectionPath = getCollectionPath(endpoint.path);
     const populate = req.query?.populate;
 
     switch (endpoint.method) {
@@ -511,11 +573,11 @@ export class DynamicEngine {
         }
 
       case 'POST': {
-        const body = (req.body || {}) as Record<string, unknown>;
-        const validation = validateDataAgainstSchema(body, endpoint.fields);
+        const rawBody = (req.body || {}) as Record<string, unknown>;
+        const validation = validateDataAgainstSchema(rawBody, endpoint.fields);
         if (!validation.valid) throw new Error(validation.errors.join(', '));
 
-        const data = applyDefaults(body, endpoint.fields);
+        const data = applyDefaults(pickSchemaData(rawBody, endpoint.fields), endpoint.fields);
         await this.assertReferences(data, endpoint.fields);
         const record = await endpointDataRepository.create(endpoint._id.toString(), collectionPath, data);
         return { success: true, data: { id: record._id, ...record.data } };
@@ -529,7 +591,13 @@ export class DynamicEngine {
           throw new Error('Record not found');
         }
 
-        const body = (req.body || {}) as Record<string, unknown>;
+        const rawBody = (req.body || {}) as Record<string, unknown>;
+        if (endpoint.method === 'PATCH') {
+          const patchValidation = validateDataAgainstSchema(rawBody, endpoint.fields);
+          if (!patchValidation.valid) throw new Error(patchValidation.errors.join(', '));
+        }
+
+        const body = pickSchemaData(rawBody, endpoint.fields);
         const merged = endpoint.method === 'PATCH'
           ? { ...existing.data, ...body }
           : body;
@@ -537,8 +605,9 @@ export class DynamicEngine {
         const validation = validateDataAgainstSchema(merged as Record<string, unknown>, endpoint.fields);
         if (!validation.valid) throw new Error(validation.errors.join(', '));
 
-        await this.assertReferences(merged as Record<string, unknown>, endpoint.fields);
-        const updated = await endpointDataRepository.update(idParam, merged as Record<string, unknown>);
+        const sanitized = pickSchemaData(merged as Record<string, unknown>, endpoint.fields);
+        await this.assertReferences(sanitized, endpoint.fields);
+        const updated = await endpointDataRepository.update(idParam, sanitized);
         return { success: true, data: { id: updated!._id, ...updated!.data } };
       }
 
@@ -563,7 +632,13 @@ export class DynamicEngine {
     body: unknown,
     query: Record<string, string>,
     user?: JwtPayload,
-    meta?: { ip?: string; userAgent?: string; headers?: Record<string, string | string[] | undefined> }
+    meta?: {
+      ip?: string;
+      userAgent?: string;
+      headers?: Record<string, string | string[] | undefined>;
+      source?: LogSource;
+      skipAuditLog?: boolean;
+    }
   ): Promise<{ statusCode: number; body: unknown }> {
     const startTime = Date.now();
     const match = await this.findMatchingEndpoint(requestPath, method);
@@ -586,21 +661,43 @@ export class DynamicEngine {
         networkMeta: { ip: meta?.ip, headers: meta?.headers },
       });
 
+      const isHandlerResponse =
+        result && typeof result === 'object' && '__handlerResponse' in (result as object);
+      const statusCode = isHandlerResponse
+        ? Number((result as { statusCode: number }).statusCode) || 200
+        : 200;
+      const responseBody = isHandlerResponse
+        ? (result as { body: unknown }).body
+        : result;
+
       await endpointRepository.incrementCallCount(endpoint._id.toString());
 
       const responseTime = Date.now() - startTime;
-      await logRepository.create({
-        action: 'api_call',
-        userId: user?.userId as unknown as import('mongoose').Types.ObjectId,
-        endpointId: endpoint._id,
-        message: `${method} ${requestPath} - 200`,
-        statusCode: 200,
-        responseTime,
-        ip: meta?.ip,
-        userAgent: meta?.userAgent,
+      const source = resolveLogSource(meta, user);
+
+      if (!shouldSkipApiAuditLog(meta)) {
+        await logRepository.create(compactLogEntry({
+          action: 'api_call',
+          source,
+          userId: resolveLogUserId(user),
+          endpointId: endpoint._id,
+          message: `${method} ${requestPath} - ${statusCode}`,
+          statusCode,
+          responseTime,
+          ip: meta?.ip,
+          userAgent: meta?.userAgent,
+        }));
+      }
+
+      void webhookService.dispatch('endpoint.called', {
+        endpointId: endpoint._id.toString(),
+        path: requestPath,
+        method,
+        statusCode,
+        userId: user?.userId,
       });
 
-      return { statusCode: 200, body: result };
+      return { statusCode, body: responseBody };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Internal server error';
       const statusCode = message.includes('not found') ? 404
@@ -608,17 +705,31 @@ export class DynamicEngine {
         : message.includes('Unauthorized') ? 401
         : 400;
 
-      const responseTime = Date.now() - startTime;
-      await logRepository.create({
-        action: 'error',
-        userId: user?.userId as unknown as import('mongoose').Types.ObjectId,
-        endpointId: endpoint._id,
-        message: `${method} ${requestPath} - ${statusCode}: ${message}`,
+      void webhookService.dispatch('api.error', {
+        path: requestPath,
+        method,
         statusCode,
-        responseTime,
-        ip: meta?.ip,
-        details: { error: message },
+        error: message,
+        endpointId: endpoint._id.toString(),
       });
+
+      const responseTime = Date.now() - startTime;
+      const source = resolveLogSource(meta, user);
+
+      if (!shouldSkipApiAuditLog(meta)) {
+        await logRepository.create(compactLogEntry({
+          action: 'error',
+          source,
+          userId: resolveLogUserId(user),
+          endpointId: endpoint._id,
+          message: `${method} ${requestPath} - ${statusCode}: ${message}`,
+          statusCode,
+          responseTime,
+          ip: meta?.ip,
+          userAgent: meta?.userAgent,
+          details: { error: message },
+        }));
+      }
 
       return { statusCode, body: { success: false, error: message } };
     }

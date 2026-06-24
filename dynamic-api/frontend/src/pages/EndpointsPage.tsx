@@ -333,7 +333,7 @@ export default function EndpointsPage() {
         <div className="flex gap-2 flex-wrap mb-5">
           <button
             onClick={() => setFilterGroup('')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!filterGroup ? 'bg-primary-600 text-white' : 'bg-dark-hover text-dark-muted hover:text-dark-text'}`}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!filterGroup ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
           >
             All
           </button>

@@ -51,6 +51,7 @@ export interface Endpoint {
   slug: string;
   path: string;
   method: string;
+  apiVersion?: string;
   groupId?: EndpointGroup;
   fields: SchemaField[];
   accessType: 'public' | 'authenticated' | 'group';
@@ -71,19 +72,36 @@ export interface DashboardStats {
   errors: number;
   groups: number;
   activeUsers: number;
+  cronJobs: number;
+  cronJobsEnabled: number;
+  webhooks: number;
+  webhooksEnabled: number;
+  apiKeys: number;
+  mcpTools: number;
   requestsOverTime: { date: string; count: number }[];
   errorsOverTime: { date: string; count: number }[];
-  userActivity: { date: string; count: number }[];
+  loginsOverTime: { date: string; count: number }[];
+  webhooksOverTime: { date: string; success: number; error: number }[];
+  cronRunsOverTime: { date: string; success: number; error: number }[];
+  trafficBySource: { direct: number; mcp: number; cron: number; api_key: number };
+  trafficBySourceOverTime: { date: string; direct: number; mcp: number; cron: number; api_key: number }[];
+  automationHealth: {
+    cronErrors: { id: string; name: string; message?: string }[];
+    webhookErrors: { id: string; name: string; url: string }[];
+    unusedApiKeys: { id: string; name: string; keyPrefix: string }[];
+  };
 }
 
 export interface LogEntry {
   _id: string;
   action: string;
+  source?: string;
   message: string;
   userId?: { login: string; name: string };
   endpointId?: { name: string; path: string; method: string };
   statusCode?: number;
   responseTime?: number;
+  userAgent?: string;
   createdAt: string;
 }
 
@@ -147,6 +165,10 @@ export interface SystemInfo {
   };
   loadAverage: number[];
   timestamp: string;
+  cronJobsActive: number;
+  cronJobsTotal: number;
+  deployMode: string;
+  updateExecutorReady: boolean;
 }
 
 export interface AppSettings {
@@ -169,6 +191,70 @@ export interface AppSettings {
 export interface SettingsResponse {
   settings: AppSettings;
   logsCount: number;
+}
+
+export interface UpdateSettings {
+  checkEnabled: boolean;
+  notifyEnabled: boolean;
+  autoUpdateEnabled: boolean;
+  checkIntervalHours: number;
+  autoUpdateIntervalHours: number;
+  githubRepo: string;
+  includePrerelease: boolean;
+  lastCheckAt: string | null;
+  lastNotifiedVersion: string | null;
+  dismissedVersion: string | null;
+  lastAppliedVersion: string | null;
+}
+
+export type UpdateJobStatus =
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'rolling_back'
+  | 'rolled_back';
+
+export interface UpdateStep {
+  id: string;
+  label: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  message?: string;
+  at?: string;
+}
+
+export interface UpdateJob {
+  _id: string;
+  status: UpdateJobStatus;
+  fromVersion: string;
+  targetVersion: string;
+  targetTag: string;
+  releaseUrl?: string;
+  releaseNotes?: string;
+  steps: UpdateStep[];
+  error?: string;
+  trigger: 'manual' | 'auto' | 'scheduled';
+  startedAt?: string;
+  finishedAt?: string;
+  createdAt: string;
+}
+
+export interface UpdateStatus {
+  currentVersion: string;
+  latestVersion: string | null;
+  latestTag: string | null;
+  updateAvailable: boolean;
+  releaseUrl: string | null;
+  releaseNotes: string | null;
+  publishedAt: string | null;
+  checkedAt: string;
+  executorAvailable: boolean;
+  executorReason: string | null;
+  deployMode: string;
+  settings: UpdateSettings;
+  activeJob: UpdateJob | null;
+  recentJobs: UpdateJob[];
+  showNotification: boolean;
 }
 
 export interface ApiResponse<T> {

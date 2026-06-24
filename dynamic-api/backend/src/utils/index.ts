@@ -2,6 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { SchemaField, FieldType, ExamplePayload } from '../types';
+import { findUnknownFields } from './schema';
+
+export { findUnknownFields, pickSchemaData } from './schema';
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -125,6 +128,8 @@ export function validateDataAgainstSchema(
     }
   }
 
+  errors.push(...findUnknownFields(data, schema));
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -213,6 +218,18 @@ export function matchDynamicPath(pattern: string, requestPath: string): { match:
   }
 
   return { match: true, params };
+}
+
+export function getEndpointMatchPaths(path: string, apiVersion?: string): string[] {
+  const paths = new Set<string>([normalizePath(path)]);
+  if (apiVersion?.trim()) {
+    const version = apiVersion.trim().startsWith('v') ? apiVersion.trim() : `v${apiVersion.trim()}`;
+    const normalized = normalizePath(path);
+    if (!normalized.includes(`/api/${version}/`)) {
+      paths.add(normalized.replace(/^\/api\//, `/api/${version}/`));
+    }
+  }
+  return [...paths];
 }
 
 export function sanitizeUser(user: Record<string, unknown>): Record<string, unknown> {

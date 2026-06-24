@@ -4,6 +4,15 @@ title: Устранение неполадок
 description: Типичные проблемы и решения
 ---
 
+## Обновление Dynamic API Platform
+
+В панели (`:8080` → **Settings → Software Updates**) отображается блок **«WASH-PHO-CRM — встроенная платформа»** с инструкцией. In-app updater отключён намеренно.
+
+```bash
+./scripts/update-dynamic-api.sh
+docker compose up -d --build dynamic-api dynamic-api-panel
+```
+
 ## init-seed: статус Exited
 
 `init-seed` — **одноразовый** контейнер. Статус `Exited (0)` означает успешное завершение.
