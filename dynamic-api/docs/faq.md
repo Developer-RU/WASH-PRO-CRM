@@ -25,7 +25,7 @@ Version 1.0 is functional for small-to-medium deployments. For production:
 - Change all default secrets
 - Use HTTPS
 - Don't expose MongoDB publicly
-- Review [Security Policy](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/SECURITY.md)
+- Review [Security Policy](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/SECURITY.md)
 
 ---
 
@@ -100,13 +100,29 @@ Existing records are **not** automatically migrated. New validation applies on w
 
 ## Deployment
 
+### Which deployment should I use?
+
+See [Deployment Variants]({{ '/deployment-variants/' | relative_url }}): Docker single (default), Docker replica set (HA DB), or Kubernetes (scaled backend).
+
 ### Why is frontend on port 8080?
 
 Default Docker mapping `8080:80`. Change in `docker-compose.yml` if port 8080 is occupied.
 
+### Why does login return "Endpoint not found" through port 8080?
+
+Usually a misconfigured nginx `proxy_pass` that forwards `POST /api/` instead of the full path. Rebuild the frontend image from the latest `frontend/nginx.conf` or use `proxy_pass http://backend:3001;` without a URI suffix when using variables.
+
 ### Can I use external MongoDB?
 
-Yes. Set `MONGODB_URI` to your MongoDB Atlas or managed instance URL.
+Yes. Set `MONGODB_URI` to your MongoDB Atlas or managed instance URL. For HA, use a replica set connection string with `?replicaSet=`.
+
+### How do I run tests?
+
+```bash
+cd backend && npm test
+```
+
+See [Testing]({{ '/testing/' | relative_url }}).
 
 ### Does it work on ARM (Apple Silicon)?
 
@@ -120,9 +136,13 @@ Yes. All Docker images support multi-arch.
 
 Create groups in **Endpoint Groups**, assign endpoints to groups. The **Endpoints** page shows collapsible sections per group.
 
-### Is there dark mode only?
+### Is there a visual map of all endpoints?
 
-Yes, v1.0 ships with a dark theme inspired by 3x-ui panel style.
+Yes. **API → API Schema** (`/api-schema`) shows a read-only ER-style diagram: endpoint groups, resource tables, field columns, and `reference` links with arrows. See [API Schema]({{ '/api-schema/' | relative_url }}).
+
+### Is there a light theme?
+
+Yes. Use the **sun/moon** button in the top header (or the link on the login page) to switch between **light** (slate + cyan, CRM-style) and **dark** themes. Preference is saved in `localStorage`.
 
 ---
 
@@ -134,4 +154,4 @@ Apache License 2.0 — free for commercial and personal use.
 
 ### How to contribute?
 
-See [CONTRIBUTING.md](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/CONTRIBUTING.md).

@@ -29,6 +29,16 @@ export interface NetworkAccessRules {
 
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 
+export type WebhookEvent =
+  | 'user.created'
+  | 'user.updated'
+  | 'user.deleted'
+  | 'endpoint.created'
+  | 'endpoint.updated'
+  | 'endpoint.deleted'
+  | 'endpoint.called'
+  | 'api.error';
+
 export type LogAction =
   | 'login'
   | 'logout'
@@ -40,7 +50,13 @@ export type LogAction =
   | 'api_call'
   | 'user_create'
   | 'user_update'
-  | 'user_delete';
+  | 'user_delete'
+  | 'webhook_dispatch'
+  | 'cron_run'
+  | 'mcp_call'
+  | 'api_key_used';
+
+export type LogSource = 'direct' | 'mcp' | 'cron' | 'api_key' | 'system';
 
 export interface SchemaField {
   name: string;
@@ -55,7 +71,7 @@ export interface SchemaField {
 
 export interface EndpointHandler {
   name: string;
-  type: 'pre' | 'post' | 'transform';
+  type: 'pre' | 'post' | 'transform' | 'javascript';
   code?: string;
   enabled: boolean;
 }
@@ -91,9 +107,24 @@ export interface DashboardStats {
   errors: number;
   groups: number;
   activeUsers: number;
+  cronJobs: number;
+  cronJobsEnabled: number;
+  webhooks: number;
+  webhooksEnabled: number;
+  apiKeys: number;
+  mcpTools: number;
   requestsOverTime: { date: string; count: number }[];
   errorsOverTime: { date: string; count: number }[];
-  userActivity: { date: string; count: number }[];
+  loginsOverTime: { date: string; count: number }[];
+  webhooksOverTime: { date: string; success: number; error: number }[];
+  cronRunsOverTime: { date: string; success: number; error: number }[];
+  trafficBySource: { direct: number; mcp: number; cron: number; api_key: number };
+  trafficBySourceOverTime: { date: string; direct: number; mcp: number; cron: number; api_key: number }[];
+  automationHealth: {
+    cronErrors: { id: string; name: string; message?: string }[];
+    webhookErrors: { id: string; name: string; url: string }[];
+    unusedApiKeys: { id: string; name: string; keyPrefix: string }[];
+  };
 }
 
 export interface TestEndpointResult {

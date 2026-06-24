@@ -1,4 +1,4 @@
-Full guide: [RBAC](https://developer-ru.github.io/Dynamic-API-Platform/rbac/)
+Full guide: [RBAC](https://dynamic-api-platform.github.io/Dynamic-API-Platform/rbac/)
 
 ## Permissions
 

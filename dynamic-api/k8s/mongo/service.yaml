@@ -1,0 +1,36 @@
+# Headless service — stable DNS: mongo-0.mongo-headless, mongo-1.mongo-headless, ...
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-headless
+  namespace: dap
+  labels:
+    app.kubernetes.io/name: mongo
+    app.kubernetes.io/component: database
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: mongo
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+# Optional ClusterIP for tools / port-forward (targets any ready member)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: dap
+  labels:
+    app.kubernetes.io/name: mongo
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mongo
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017

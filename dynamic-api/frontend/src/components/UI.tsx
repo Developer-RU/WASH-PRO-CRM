@@ -75,7 +75,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
-        className={`w-full max-h-[90vh] overflow-y-auto rounded-xl bg-white p-0 shadow-xl dark:bg-slate-900 ${wide ? 'max-w-3xl' : 'max-w-lg'}`}
+        className={`w-full max-h-[90vh] overflow-y-auto rounded-xl bg-white p-0 shadow-xl dark:bg-slate-900 ${wide ? 'max-w-4xl' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">

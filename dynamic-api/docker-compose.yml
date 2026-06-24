@@ -1,3 +1,10 @@
+# =============================================================================
+# Dynamic API Platform — Docker Compose (single-node MongoDB)
+# Auto-update works out of the box: docker compose up -d --build
+# =============================================================================
+
+name: dap
+
 services:
   mongodb:
     image: mongo:7
@@ -17,12 +24,14 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: dap-backend
     restart: unless-stopped
     ports:
       - "3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -31,18 +40,31 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dap-super-secret-refresh-key-change-in-production}
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
-      CORS_ORIGIN: http://localhost:8080
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       RATE_LIMIT_WINDOW_MS: 900000
       RATE_LIMIT_MAX: 1000
       CSRF_SECRET: ${CSRF_SECRET:-dap-csrf-secret-change-in-production}
       ADMIN_EMAIL: admin@dynamic-api.local
       ADMIN_PASSWORD: Admin123!
       ADMIN_LOGIN: admin
+      APP_VERSION: ${APP_VERSION:-1.5.6}
+      UPDATE_EXECUTOR_ENABLED: ${UPDATE_EXECUTOR_ENABLED:-true}
+      UPDATE_DEPLOY_MODE: docker
+      UPDATE_COMPOSE_FILE: /deploy/docker-compose.yml
+      UPDATE_PROJECT_ROOT: /deploy
+      UPDATE_HOST_PROJECT_ROOT: ${PWD}
+      UPDATE_DATA_DIR: /app/data/updates
+      UPDATE_DATA_VOLUME: dap_update_data
+      UPDATE_DOCKER_NETWORK: dap_default
+      UPDATE_HEALTH_URL: http://backend:3001/api/health
     depends_on:
       mongodb:
         condition: service_healthy
     volumes:
       - backend_logs:/app/logs
+      - update_data:/app/data/updates
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PWD}:/deploy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
       interval: 15s
@@ -68,3 +90,5 @@ volumes:
     name: dap_mongodb_data
   backend_logs:
     name: dap_backend_logs
+  update_data:
+    name: dap_update_data

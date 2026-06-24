@@ -27,6 +27,16 @@ Copy `.env.example` to `.env` for Docker Compose variable substitution.
 | `ADMIN_EMAIL` | `admin@dynamic-api.local` | Seed admin email |
 | `ADMIN_PASSWORD` | `Admin123!` | Seed admin password |
 | `VITE_API_URL` | `""` | Frontend API base (build-time) |
+| `APP_VERSION` | `package.json` | Installed version for update checks |
+| `UPDATE_EXECUTOR_ENABLED` | `false` | Enable in-app apply/rollback |
+| `UPDATE_DEPLOY_MODE` | `docker` | `docker`, `docker-replica`, `native` |
+| `UPDATE_COMPOSE_FILE` | `/deploy/docker-compose.yml` | Compose file in project mount |
+| `UPDATE_PROJECT_ROOT` | `/deploy` | Host project path in container |
+| `UPDATE_DATA_DIR` | `/app/data/updates` | Update job data directory |
+| `UPDATE_HEALTH_URL` | `http://localhost:3001/api/health` | Post-update health probe |
+| `UPDATE_RUNNER_IMAGE` | `docker:26-cli` | Detached updater container image |
+
+See [Software Updates]({{ '/updates/' | relative_url }}) for auto-update setup.
 
 > **Production:** Change all secrets and default admin password.
 
@@ -70,6 +80,10 @@ Rate limit middleware reads cached settings and updates without restart.
 |---------|-------------|
 | Logs per page | Default for Logs page |
 | Users per page | Default for Users page |
+
+### Software updates
+
+Configured via separate API (`/api/updates/settings`). See [Software Updates]({{ '/updates/' | relative_url }}).
 
 ---
 

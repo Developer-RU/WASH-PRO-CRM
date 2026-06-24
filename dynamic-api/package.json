@@ -1,18 +1,18 @@
 {
   "name": "dynamic-api-platform",
-  "version": "1.0.0",
+  "version": "1.5.6",
   "description": "Create, manage and test dynamic REST APIs without writing backend code",
   "private": true,
   "license": "Apache-2.0",
-  "author": "Developer-RU",
+  "author": "Dynamic API Platform",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Developer-RU/Dynamic-API-Platform.git"
+    "url": "https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git"
   },
   "bugs": {
-    "url": "https://github.com/Developer-RU/Dynamic-API-Platform/issues"
+    "url": "https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/issues"
   },
-  "homepage": "https://developer-ru.github.io/Dynamic-API-Platform/",
+  "homepage": "https://dynamic-api-platform.github.io/Dynamic-API-Platform/",
   "keywords": [
     "dynamic-api",
     "rest-api",
@@ -22,15 +22,26 @@
     "react",
     "rbac",
     "docker",
+    "kubernetes",
     "api-platform",
-    "baas"
+    "baas",
+    "mcp",
+    "openapi"
   ],
   "scripts": {
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd backend && npm run build && cd ../frontend && npm run build",
     "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "docker:replica:up": "docker compose -f docker-compose.replica.yml up -d --build",
+    "docker:replica:down": "docker compose -f docker-compose.replica.yml down",
+    "docker:replica:status": "docker exec dap-mongo1 mongosh --quiet --eval \"rs.status().members.map(m => m.name + ' -> ' + m.stateStr).join('\\n')\"",
+    "k8s:build": "docker build -t dap/backend:latest -f backend/Dockerfile . && docker build -t dap/frontend:latest --build-arg VITE_API_URL= ./frontend",
+    "k8s:deploy": "./k8s/scripts/deploy.sh",
+    "k8s:status": "kubectl get pods,svc,ingress -n dap",
+    "k8s:teardown": "kubectl delete -k k8s",
+    "screenshots": "node scripts/capture-screenshots.mjs http://localhost:8080"
   },
   "engines": {
     "node": ">=20.0.0"

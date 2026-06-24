@@ -1,4 +1,4 @@
-Full guide: [Network Access](https://developer-ru.github.io/Dynamic-API-Platform/network-access/)
+Full guide: [Network Access](https://dynamic-api-platform.github.io/Dynamic-API-Platform/network-access/)
 
 Restrict **dynamic API** calls by **allowed domains** and **IP/CIDR pools** — separate from JWT/RBAC access types.
 

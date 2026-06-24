@@ -17,4 +17,7 @@ const EndpointDataSchema = new Schema<IEndpointData>(
   { timestamps: true }
 );
 
+EndpointDataSchema.index({ resourcePath: 1, createdAt: -1 });
+EndpointDataSchema.index({ endpointId: 1, createdAt: -1 });
+
 export const EndpointData = mongoose.model<IEndpointData>('EndpointData', EndpointDataSchema);

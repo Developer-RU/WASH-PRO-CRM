@@ -1,4 +1,4 @@
-Full guide: [Database Explorer](https://developer-ru.github.io/Dynamic-API-Platform/database/)
+Full guide: [Database Explorer](https://dynamic-api-platform.github.io/Dynamic-API-Platform/database/)
 
 Admin panel section **Database** (`/database`) — browse and edit MongoDB collections as raw JSON.
 

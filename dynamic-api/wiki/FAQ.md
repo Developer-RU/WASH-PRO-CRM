@@ -1,4 +1,10 @@
-Full FAQ: [FAQ](https://developer-ru.github.io/Dynamic-API-Platform/faq/)
+Full FAQ: [FAQ](https://dynamic-api-platform.github.io/Dynamic-API-Platform/faq/)
+
+**Q: Which deployment option should I use?**  
+- Quick start / dev → Docker single (`docker compose up -d`)  
+- HA MongoDB without K8s → [Docker replica set](MongoDB-Replica-Set)  
+- Production cluster → [Kubernetes](Kubernetes)  
+See [Deployment Variants](Deployment-Variants).
 
 **Q: Can I use GET and POST on same path?**  
 Yes, data is shared via `resourcePath`.
@@ -9,20 +15,29 @@ Yes. Use schema type **`reference`**, pick the target endpoint, pass a record `i
 **Q: Do I need to restart the server for new endpoints?**  
 No. Routes are loaded from MongoDB on each request.
 
+**Q: How do I run tests?**  
+`cd backend && npm test` — see [Testing](Testing).
+
 **Q: Can I delete system endpoints?**  
 No, they are protected.
 
 **Q: Test on `/api/users` returns Forbidden?**  
-Update to the latest backend — the tester now uses the real management API with RBAC.
-
-**Q: Can I browse MongoDB in the UI?**  
-Yes — **Database** page (`/database`), requires `manage_users`. See [Database Explorer](Database-Explorer).
+Update to the latest backend — the tester uses the real management API with RBAC.
 
 **Q: Can I restrict endpoints by domain or IP?**  
-Yes — **Network Access** on endpoint groups and endpoints. See [Network Access](Network-Access).
+Yes — [Network Access](Network-Access). Configure on endpoint groups or the Network Access tab.
+
+**Q: Can I browse MongoDB in the UI?**  
+Yes — [Database Explorer](Database-Explorer) (`/database`, requires `manage_users`).
+
+**Q: What is MCP Server?**  
+JSON-RPC at `POST /api/mcp` exposes dynamic endpoints as AI agent tools. Admin UI at `/mcp`.
+
+**Q: Light or dark theme?**  
+Both. Toggle in the header or on the login page.
 
 **Q: How to reset database?**  
-`docker compose down -v && docker compose up -d`
+`docker compose down -v && docker compose up -d` (**deletes all data**). Replica set: `docker compose -f docker-compose.replica.yml down -v`.
 
 **Q: License?**  
 Apache License 2.0

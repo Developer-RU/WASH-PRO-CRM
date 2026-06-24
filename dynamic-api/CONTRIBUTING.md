@@ -27,7 +27,7 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 ### Quick setup
 
 ```bash
-git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
+git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 cp .env.example .env
 docker compose up -d
@@ -53,13 +53,19 @@ cd frontend && npm install && npm run dev
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/my-feature`
 3. Make your changes
-4. Run builds:
+4. Run tests and builds:
    ```bash
-   cd backend && npm run build
+   cd backend && npm test && npm run build
    cd ../frontend && npm run build
    ```
-5. Commit with a clear message
-6. Push and open a Pull Request
+5. Optional load test (backend must be running):
+   ```bash
+   cd backend && npm run test:load
+   ```
+6. Commit with a clear message
+7. Push and open a Pull Request
+
+See [docs/testing.md](docs/testing.md) for unit test suites, load test options, and CI details.
 
 ## Project Structure
 
@@ -136,4 +142,4 @@ Use the [Bug Report issue template](.github/ISSUE_TEMPLATE/bug_report.yml). Incl
 
 ## Questions?
 
-Open a [Discussion](https://github.com/Developer-RU/Dynamic-API-Platform/discussions) or an issue with the `question` label.
+Open a [Discussion](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/discussions) or an issue with the `question` label.

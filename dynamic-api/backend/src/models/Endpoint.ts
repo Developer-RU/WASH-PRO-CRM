@@ -7,6 +7,7 @@ export interface IEndpoint extends Document {
   slug: string;
   path: string;
   method: HttpMethod;
+  apiVersion?: string;
   groupId?: mongoose.Types.ObjectId;
   fields: SchemaField[];
   accessType: AccessType;
@@ -52,7 +53,7 @@ const NetworkAccessSchema = new Schema(
 const EndpointHandlerSchema = new Schema(
   {
     name: { type: String, required: true },
-    type: { type: String, enum: ['pre', 'post', 'transform'], required: true },
+    type: { type: String, enum: ['pre', 'post', 'transform', 'javascript'], required: true },
     code: { type: String },
     enabled: { type: Boolean, default: true },
   },
@@ -66,6 +67,7 @@ const EndpointSchema = new Schema<IEndpoint>(
     slug: { type: String, required: true, trim: true },
     path: { type: String, required: true, trim: true },
     method: { type: String, enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], required: true },
+    apiVersion: { type: String, trim: true },
     groupId: { type: Schema.Types.ObjectId, ref: 'EndpointGroup' },
     fields: {
       type: [SchemaFieldSchema],
@@ -94,5 +96,7 @@ const EndpointSchema = new Schema<IEndpoint>(
 );
 
 EndpointSchema.index({ path: 1, method: 1 }, { unique: true });
+EndpointSchema.index({ enabled: 1, isSystem: 1 });
+EndpointSchema.index({ groupId: 1 });
 
 export const Endpoint = mongoose.model<IEndpoint>('Endpoint', EndpointSchema);

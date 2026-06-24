@@ -10,6 +10,9 @@ import {
   SystemInfo,
   AppSettings,
   SettingsResponse,
+  UpdateSettings,
+  UpdateStatus,
+  UpdateJob,
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -388,6 +391,156 @@ class ApiClient {
       options.body = JSON.stringify(body);
     }
     return this.request(path, options);
+  }
+
+  async exportProject(options?: { includeData?: boolean; includeSettings?: boolean }) {
+    const params = new URLSearchParams();
+    if (options?.includeData) params.set('includeData', 'true');
+    if (options?.includeSettings) params.set('includeSettings', 'true');
+    const res = await this.request<{ success: boolean; data: Record<string, unknown> }>(
+      `/api/project/export?${params}`
+    );
+    return res.data;
+  }
+
+  async importProject(
+    bundle: Record<string, unknown>,
+    options?: { mode?: 'merge' | 'replace'; includeData?: boolean }
+  ) {
+    const res = await this.request<{
+      success: boolean;
+      data: { groupsCreated: number; endpointsCreated: number; endpointsUpdated: number; recordsImported: number };
+      message: string;
+    }>('/api/project/import', {
+      method: 'POST',
+      body: JSON.stringify({ bundle, ...options }),
+    });
+    return res;
+  }
+
+  async getCronJobs() {
+    const res = await this.request<{ success: boolean; data: unknown[] }>('/api/cron');
+    return res.data;
+  }
+
+  async createCronJob(data: Record<string, unknown>) {
+    const res = await this.request<{ success: boolean; data: unknown }>('/api/cron', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  }
+
+  async deleteCronJob(id: string) {
+    await this.request(`/api/cron/${id}`, { method: 'DELETE' });
+  }
+
+  async runCronJob(id: string) {
+    const res = await this.request<{ success: boolean; data: { success: boolean; message: string } }>(
+      `/api/cron/${id}/run`,
+      { method: 'POST' }
+    );
+    return res.data;
+  }
+
+  async getWebhooks() {
+    const res = await this.request<{ success: boolean; data: unknown[] }>('/api/webhooks');
+    return res.data;
+  }
+
+  async createWebhook(data: Record<string, unknown>) {
+    const res = await this.request<{ success: boolean; data: unknown }>('/api/webhooks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  }
+
+  async deleteWebhook(id: string) {
+    await this.request(`/api/webhooks/${id}`, { method: 'DELETE' });
+  }
+
+  async testWebhook(id: string) {
+    await this.request(`/api/webhooks/${id}/test`, { method: 'POST' });
+  }
+
+  async getApiKeys() {
+    const res = await this.request<{ success: boolean; data: unknown[] }>('/api/api-keys');
+    return res.data;
+  }
+
+  async createApiKey(data: { name: string; permissions: string[] }) {
+    const res = await this.request<{ success: boolean; data: { apiKey: string } }>('/api/api-keys', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  }
+
+  async deleteApiKey(id: string) {
+    await this.request(`/api/api-keys/${id}`, { method: 'DELETE' });
+  }
+
+  async getMcpTools() {
+    const res = await this.request<{ success: boolean; data: unknown[] }>('/api/mcp/tools');
+    return res.data;
+  }
+
+  async getUpdateStatus() {
+    const res = await this.request<{ success: boolean; data: UpdateStatus }>('/api/updates/status');
+    return res.data;
+  }
+
+  async checkForUpdates() {
+    const res = await this.request<{ success: boolean; data: UpdateStatus & { updateAvailable?: boolean } }>(
+      '/api/updates/check',
+      { method: 'POST' }
+    );
+    return res.data;
+  }
+
+  async getUpdateSettings() {
+    const res = await this.request<{ success: boolean; data: UpdateSettings }>('/api/updates/settings');
+    return res.data;
+  }
+
+  async updateUpdateSettings(settings: Partial<UpdateSettings>) {
+    const res = await this.request<{ success: boolean; data: UpdateSettings }>('/api/updates/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+    return res.data;
+  }
+
+  async applyUpdate(targetVersion?: string) {
+    const res = await this.request<{ success: boolean; data: UpdateJob; message: string }>('/api/updates/apply', {
+      method: 'POST',
+      body: JSON.stringify(targetVersion ? { targetVersion } : {}),
+    });
+    return res;
+  }
+
+  async dismissUpdate(version: string) {
+    await this.request('/api/updates/dismiss', {
+      method: 'POST',
+      body: JSON.stringify({ version }),
+    });
+  }
+
+  async rollbackUpdate(jobId: string) {
+    const res = await this.request<{ success: boolean; data: UpdateJob; message: string }>(
+      `/api/updates/jobs/${jobId}/rollback`,
+      { method: 'POST' }
+    );
+    return res;
+  }
+
+  async cancelUpdate(jobId: string) {
+    const res = await this.request<{ success: boolean; data: UpdateJob; message: string }>(
+      `/api/updates/jobs/${jobId}/cancel`,
+      { method: 'POST' }
+    );
+    return res;
   }
 }
 

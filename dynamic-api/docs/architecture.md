@@ -152,7 +152,7 @@ Request
   → Audit log (on significant actions)
 ```
 
-## Docker architecture
+## Docker architecture (Variant 1)
 
 | Container | Image | Role |
 |-----------|-------|------|
@@ -163,6 +163,16 @@ Request
 Volumes:
 - `dap_mongodb_data` — persistent database
 - `dap_backend_logs` — application logs
+
+## Deployment variants
+
+| Variant | File / path | MongoDB |
+|---------|-------------|---------|
+| 1 — Docker single | `docker-compose.yml` | 1 node |
+| 2 — Docker replica set | `docker-compose.replica.yml` | 3 nodes, `rs0` |
+| 3 — Kubernetes | `k8s/` | StatefulSet ×3, `rs0` |
+
+Guides: [Deployment Variants]({{ '/deployment-variants/' | relative_url }}) · [MongoDB Replica Set]({{ '/mongodb-replica-set/' | relative_url }}) · [Kubernetes]({{ '/kubernetes/' | relative_url }})
 
 ## Seed data
 

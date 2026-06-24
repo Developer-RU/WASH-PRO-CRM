@@ -12,6 +12,12 @@ import EndpointGroupsPage from './pages/EndpointGroupsPage';
 import SystemPage from './pages/SystemPage';
 import SettingsPage from './pages/SettingsPage';
 import LogsPage from './pages/LogsPage';
+import ApiSchemaPage from './pages/ApiSchemaPage';
+import ApiDocsPage from './pages/ApiDocsPage';
+import CronJobsPage from './pages/CronJobsPage';
+import WebhooksPage from './pages/WebhooksPage';
+import ApiKeysPage from './pages/ApiKeysPage';
+import McpPage from './pages/McpPage';
 import DatabasePage from './pages/DatabasePage';
 import { LoadingSpinner } from './components/UI';
 
@@ -49,7 +55,13 @@ function AppRoutes() {
       <Route path="/endpoint-groups" element={<ProtectedRoute><EndpointGroupsPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/system" element={<ProtectedRoute><SystemPage /></ProtectedRoute>} />
+      <Route path="/api-schema" element={<ProtectedRoute><ApiSchemaPage /></ProtectedRoute>} />
       <Route path="/logs" element={<ProtectedRoute><LogsPage /></ProtectedRoute>} />
+      <Route path="/api-docs" element={<ProtectedRoute><ApiDocsPage /></ProtectedRoute>} />
+      <Route path="/cron" element={<ProtectedRoute><CronJobsPage /></ProtectedRoute>} />
+      <Route path="/webhooks" element={<ProtectedRoute><WebhooksPage /></ProtectedRoute>} />
+      <Route path="/api-keys" element={<ProtectedRoute><ApiKeysPage /></ProtectedRoute>} />
+      <Route path="/mcp" element={<ProtectedRoute><McpPage /></ProtectedRoute>} />
       <Route path="/database" element={<ProtectedRoute><DatabasePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

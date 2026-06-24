@@ -1,6 +1,7 @@
 import { User, IUser, Group, IGroup, Endpoint, IEndpoint, EndpointGroup, IEndpointGroup, EndpointData, IEndpointData, Log, ILog } from '../models';
 import { PaginatedResult } from '../types';
 import { buildTextSearchFilter } from '../utils';
+import { compactLogEntry } from '../utils/auditLog';
 import { FilterQuery } from 'mongoose';
 
 export class UserRepository {
@@ -9,7 +10,7 @@ export class UserRepository {
   }
 
   async findByLogin(login: string): Promise<IUser | null> {
-    return User.findOne({ login: login.toLowerCase() });
+    return User.findOne({ login: login.toLowerCase() }).populate('groupIds');
   }
 
   async findByEmail(email: string): Promise<IUser | null> {
@@ -198,7 +199,7 @@ export class EndpointDataRepository {
 
 export class LogRepository {
   async create(data: Partial<ILog>): Promise<ILog> {
-    return Log.create(data);
+    return Log.create(compactLogEntry(data));
   }
 
   async findAll(page = 1, limit = 50, filter: FilterQuery<ILog> = {}): Promise<PaginatedResult<ILog>> {
@@ -237,6 +238,123 @@ export class LogRepository {
     return this.countByActionOverTime('login', days);
   }
 
+  async countSince(filter: FilterQuery<ILog>, days = 7): Promise<number> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    return Log.countDocuments({ ...filter, createdAt: { $gte: since } });
+  }
+
+  async countByActionStatusOverTime(
+    action: string,
+    days = 7
+  ): Promise<{ date: string; success: number; error: number }[]> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const results = await Log.aggregate([
+      { $match: { action, createdAt: { $gte: since } } },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            status: '$details.status',
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.date': 1 } },
+    ]);
+
+    const map = new Map<string, { success: number; error: number }>();
+    for (const row of results) {
+      const date = row._id.date as string;
+      const entry = map.get(date) || { success: 0, error: 0 };
+      if (row._id.status === 'success') entry.success += row.count;
+      else entry.error += row.count;
+      map.set(date, entry);
+    }
+
+    return Array.from(map.entries()).map(([date, counts]) => ({ date, ...counts }));
+  }
+
+  async countTrafficBySource(days = 7): Promise<Record<string, number>> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const [apiCalls, mcpCalls] = await Promise.all([
+      Log.aggregate([
+        { $match: { action: 'api_call', createdAt: { $gte: since } } },
+        { $group: { _id: { $ifNull: ['$source', 'direct'] }, count: { $sum: 1 } } },
+      ]),
+      Log.countDocuments({ action: 'mcp_call', createdAt: { $gte: since } }),
+    ]);
+
+    const totals: Record<string, number> = { direct: 0, mcp: 0, cron: 0, api_key: 0 };
+    for (const row of apiCalls) {
+      const key = row._id as string;
+      if (key in totals) totals[key] += row.count;
+      else totals.direct += row.count;
+    }
+    totals.mcp += mcpCalls;
+    return totals;
+  }
+
+  async countTrafficBySourceOverTime(
+    days = 7
+  ): Promise<{ date: string; direct: number; mcp: number; cron: number; api_key: number }[]> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const [apiCalls, mcpCalls] = await Promise.all([
+      Log.aggregate([
+        { $match: { action: 'api_call', createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: {
+              date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+              source: { $ifNull: ['$source', 'direct'] },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { '_id.date': 1 } },
+      ]),
+      Log.aggregate([
+        { $match: { action: 'mcp_call', createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+    const map = new Map<string, { direct: number; mcp: number; cron: number; api_key: number }>();
+
+    const ensure = (date: string) => {
+      if (!map.has(date)) map.set(date, { direct: 0, mcp: 0, cron: 0, api_key: 0 });
+      return map.get(date)!;
+    };
+
+    for (const row of apiCalls) {
+      const date = row._id.date as string;
+      const source = row._id.source as keyof ReturnType<typeof ensure>;
+      const entry = ensure(date);
+      if (source in entry) entry[source as 'direct' | 'mcp' | 'cron' | 'api_key'] += row.count;
+      else entry.direct += row.count;
+    }
+
+    for (const row of mcpCalls) {
+      ensure(row._id).mcp += row.count;
+    }
+
+    return Array.from(map.entries())
+      .map(([date, counts]) => ({ date, ...counts }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   async deleteAll(): Promise<number> {
     const result = await Log.deleteMany({});
     return result.deletedCount;
@@ -256,3 +374,10 @@ export const endpointRepository = new EndpointRepository();
 export const endpointGroupRepository = new EndpointGroupRepository();
 export const endpointDataRepository = new EndpointDataRepository();
 export const logRepository = new LogRepository();
+
+export {
+  cronJobRepository,
+  webhookRepository,
+  apiKeyRepository,
+  generateApiKeyRaw,
+} from './automation.repositories';

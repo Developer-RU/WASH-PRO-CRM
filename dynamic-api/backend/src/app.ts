@@ -16,6 +16,14 @@ import dashboardRoutes from './routes/dashboard.routes';
 import dynamicRoutes from './routes/dynamic.routes';
 import settingsRoutes from './routes/settings.routes';
 import databaseRoutes from './routes/database.routes';
+import openapiRoutes from './routes/openapi.routes';
+import projectRoutes from './routes/project.routes';
+import cronRoutes from './routes/cron.routes';
+import webhooksRoutes from './routes/webhooks.routes';
+import apiKeysRoutes from './routes/api-keys.routes';
+import mcpRoutes from './routes/mcp.routes';
+import updatesRoutes from './routes/updates.routes';
+import { getAppVersion } from './services/update-settings.service';
 import { apiRateLimitMiddleware } from './middleware/rateLimit';
 
 export function createApp(): express.Application {
@@ -34,7 +42,7 @@ export function createApp(): express.Application {
     origin: corsOrigins.length > 1 ? corsOrigins : corsOrigins[0] || true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-API-Key'],
   }));
 
   app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
@@ -47,7 +55,12 @@ export function createApp(): express.Application {
   const csrfProtection = csrf({ cookie: { httpOnly: true, secure: env.nodeEnv === 'production' } });
 
   app.get('/api/health', (_req, res) => {
-    res.json({ success: true, status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+      success: true,
+      status: 'ok',
+      version: getAppVersion(),
+      timestamp: new Date().toISOString(),
+    });
   });
 
   app.get('/api/csrf-token', csrfProtection, (req, res) => {
@@ -62,6 +75,13 @@ export function createApp(): express.Application {
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/database', databaseRoutes);
+  app.use('/api', openapiRoutes);
+  app.use('/api/project', projectRoutes);
+  app.use('/api/cron', cronRoutes);
+  app.use('/api/webhooks', webhooksRoutes);
+  app.use('/api/api-keys', apiKeysRoutes);
+  app.use('/api/mcp', mcpRoutes);
+  app.use('/api/updates', updatesRoutes);
 
   app.use('/api', dynamicRoutes);
 

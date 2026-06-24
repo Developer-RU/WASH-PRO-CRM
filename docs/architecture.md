@@ -73,7 +73,23 @@ MongoDB и RabbitMQ **не публикуются** наружу по умолч
 
 ## Зависимость от Dynamic API
 
-Проект включает `dynamic-api/` — vendored-копия [Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) с локальными патчами (CORS, обработка 502, Safari email). Обновление:
+Проект включает `dynamic-api/` — vendored-копия [Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) **v1.5.6** с локальными патчами (CORS, обработка 502, Safari email).
+
+### Возможности платформы (актуально для панели `:8080`)
+
+| Версия | Основное |
+|--------|----------|
+| **1.5.x** | In-app проверка обновлений (UI), авто-обновление в standalone Docker; в WASH — через скрипт (см. ниже) |
+| **1.4.x** | KPI автоматизации на Dashboard, audit logs с `source`, K8s / replica set манифесты |
+| **1.3.x** | Cron, Webhooks, MCP, API Keys, версионирование API |
+| **1.2.x** | OpenAPI, экспорт/импорт проекта, JS handlers |
+| **1.1.x** | Database Explorer, references, Network Access |
+
+Полный changelog: `dynamic-api/CHANGELOG.md` и [релизы на GitHub](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases).
+
+### Обновление в WASH-PHO-CRM
+
+Встроенный **Update executor** отключён (`UPDATE_EXECUTOR_ENABLED=false`) — платформа встроена в репозиторий, а не развёрнута как отдельный clone. Обновление:
 
 ```bash
 ./scripts/update-dynamic-api.sh
@@ -81,4 +97,4 @@ docker compose up -d --build dynamic-api dynamic-api-panel
 ./scripts/run-init-seed.sh   # при изменениях схемы API
 ```
 
-Патчи описаны в `patches/dynamic-api-wash.patch`. База — `cursor/db-explorer-reference-fields-and-auth-fixes`, поверх накладывается тема из `cursor/fix-light-theme-and-auth-proxy`. После merge апстрима в `main`: `DYNAMIC_API_REF=origin/main`.
+Патчи: `patches/dynamic-api-wash.patch`. Сборка backend: `context: ./dynamic-api`, `dockerfile: backend/Dockerfile` (нужны `scripts/` для updater).

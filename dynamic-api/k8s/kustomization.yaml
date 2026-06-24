@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dap
+
+commonLabels:
+  app.kubernetes.io/part-of: dynamic-api-platform
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - mongo/service.yaml
+  - mongo/statefulset.yaml
+  - mongo/configmap-init.yaml
+  - backend/configmap.yaml
+  - backend/secrets.example.yaml
+  - backend/service.yaml
+  - backend/deployment.yaml
+  - frontend/service.yaml
+  - frontend/deployment.yaml
+  - frontend/service-nodeport.yaml
+
+# Optional: kubectl apply -f k8s/ingress.yaml (requires Ingress controller)

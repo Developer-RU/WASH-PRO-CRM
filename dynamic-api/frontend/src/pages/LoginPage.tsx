@@ -85,14 +85,42 @@ export default function LoginPage() {
           </p>
         </form>
 
-        <div className="mt-4 text-center">
+        <div className="mt-4 flex flex-col items-center gap-2 text-center text-sm">
           <button
             type="button"
             onClick={toggleTheme}
-            className="text-sm text-slate-500 hover:text-brand-600 dark:hover:text-brand-300"
+            className="text-slate-500 hover:text-brand-600 dark:hover:text-brand-300"
           >
             {theme === 'dark' ? 'Light theme' : 'Dark theme'}
           </button>
+          <div className="flex items-center gap-3 text-slate-500">
+            <a
+              href="https://dynamic-api-platform.github.io/Dynamic-API-Platform/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-brand-600 dark:hover:text-brand-300"
+            >
+              Documentation
+            </a>
+            <span aria-hidden>·</span>
+            <a
+              href="https://github.com/Dynamic-API-Platform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-brand-600 dark:hover:text-brand-300"
+            >
+              GitHub
+            </a>
+            <span aria-hidden>·</span>
+            <a
+              href="https://github.com/Developer-RU"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-brand-600 dark:hover:text-brand-300"
+            >
+              Developer
+            </a>
+          </div>
         </div>
       </div>
     </div>

@@ -2,23 +2,26 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm install
 
-COPY tsconfig.json ./
-COPY src ./src
+COPY backend/tsconfig.json ./
+COPY backend/src ./src
 RUN npm run build
 
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-RUN apk add --no-cache wget
+RUN apk add --no-cache wget docker-cli bash git jq curl
 
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY scripts /app/scripts
+
+ENV APP_VERSION=1.5.3
 
 EXPOSE 3001
 

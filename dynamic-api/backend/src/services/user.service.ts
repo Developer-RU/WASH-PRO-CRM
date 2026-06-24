@@ -1,6 +1,7 @@
 import { userRepository, groupRepository, logRepository } from '../repositories';
 import { hashPassword, sanitizeUser } from '../utils';
 import { CreateUserDto, UpdateUserDto } from '../dto';
+import { webhookService } from './webhook.service';
 
 export class UserService {
   async getAll(page = 1, limit = 20, search?: string) {
@@ -38,6 +39,12 @@ export class UserService {
       details: { userId: user._id.toString() },
     });
 
+    void webhookService.dispatch('user.created', {
+      userId: user._id.toString(),
+      login: user.login,
+      email: user.email,
+    });
+
     return sanitizeUser(user.toObject());
   }
 
@@ -61,6 +68,8 @@ export class UserService {
       details: { userId: id },
     });
 
+    void webhookService.dispatch('user.updated', { userId: id, login: user.login });
+
     return sanitizeUser(user.toObject());
   }
 
@@ -76,6 +85,8 @@ export class UserService {
       message: `User ${user.login} deleted`,
       details: { userId: id },
     });
+
+    void webhookService.dispatch('user.deleted', { userId: id, login: user.login });
   }
 
   async getProfile(userId: string) {

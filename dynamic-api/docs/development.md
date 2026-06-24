@@ -16,7 +16,7 @@ title: Development
 ## Setup
 
 ```bash
-git clone https://github.com/Developer-RU/Dynamic-API-Platform.git
+git clone https://github.com/Dynamic-API-Platform/Dynamic-API-Platform.git
 cd Dynamic-API-Platform
 
 # Start MongoDB only
@@ -34,7 +34,11 @@ npm install
 npm run dev    # Vite on port 5173
 ```
 
-Open http://localhost:5173
+Open http://localhost:5173 — Vite proxies `/api` to the backend on port 3001.
+
+### UI themes
+
+Light and dark themes are available. Toggle in the admin header; preference is stored in `localStorage` under key `theme`.
 
 ## Scripts
 
@@ -46,6 +50,9 @@ Open http://localhost:5173
 | `npm run build` | Compile TypeScript |
 | `npm start` | Run compiled `dist/index.js` |
 | `npm run seed` | Run seed script manually |
+| `npm test` | Run unit tests (Vitest) |
+| `npm run test:watch` | Unit tests in watch mode |
+| `npm run test:load` | Load test against running API (autocannon) |
 
 ### Frontend
 
@@ -91,6 +98,18 @@ cd backend && npm run build
 cd ../frontend && npm run build
 ```
 
+## Testing
+
+See the full guide: [Testing]({{ '/testing/' | relative_url }})
+
+```bash
+cd backend
+npm test              # unit tests (30 tests, no MongoDB required)
+npm run test:load     # load test (requires running backend)
+```
+
+CI runs `npm test` on every push to `main`.
+
 ## Testing API manually
 
 Use the built-in endpoint tester or:
@@ -113,4 +132,4 @@ See [Troubleshooting](troubleshooting.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/Developer-RU/Dynamic-API-Platform/blob/main/CONTRIBUTING.md) on GitHub.
+See [CONTRIBUTING.md](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/CONTRIBUTING.md) on GitHub.

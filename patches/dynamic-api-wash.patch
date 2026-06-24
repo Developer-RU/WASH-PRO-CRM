@@ -6,3 +6,7 @@
 # 3. frontend/src/pages/UsersPage.tsx — Safari: type=text + noValidate для email
 #
 # resourcePath / DELETE по :id — в upstream (getCollectionPath), отдельный патч не нужен.
+#
+# WASH-специфика docker-compose:
+# - build context: ./dynamic-api (не backend/) — нужны scripts/ для v1.5+
+# - UPDATE_EXECUTOR_ENABLED=false — in-app updater не применим к vendored-копии

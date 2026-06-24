@@ -4,3 +4,9 @@ export { endpointService, endpointGroupService, dynamicEngine } from './endpoint
 export { dashboardService, logService } from './dashboard.service';
 export { systemService } from './system.service';
 export { databaseService } from './database.service';
+export { openApiService } from './openapi.service';
+export { projectService } from './project.service';
+export { webhookService } from './webhook.service';
+export { cronScheduler } from './cron.service';
+export { apiKeyService } from './api-key.service';
+export { mcpService } from './mcp.service';

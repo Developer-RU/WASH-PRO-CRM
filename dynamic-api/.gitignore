@@ -9,8 +9,10 @@ build/
 coverage/
 .vite/
 docker-compose.override.yml
+k8s/backend/secrets.yaml
 .idea/
 .vscode/
 *.swp
 *.swo
 Thumbs.db
+*.tsbuildinfo
