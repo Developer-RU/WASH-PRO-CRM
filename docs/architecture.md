@@ -58,9 +58,9 @@ MongoDB и RabbitMQ **не публикуются** наружу по умолч
 
 При старте `init-seed`:
 
-- Создаёт CRM endpoint groups и 37 endpoints
+- Создаёт **11** CRM endpoint groups и **52** endpoints
 - Настраивает RBAC (Administrator, Operator, Viewer, Service)
-- Добавляет настройки по умолчанию (backup, archive, telegram, notifications)
+- Добавляет настройки по умолчанию, валюту RUB и типы скидок 1–5
 - Идемпотентен — безопасно запускать повторно
 
 ## Volumes

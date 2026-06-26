@@ -60,27 +60,6 @@ const navSections: { label: string; items: NavItem[] }[] = [
 
 const DOCS_URL = 'https://dynamic-api-platform.github.io/Dynamic-API-Platform/';
 const GITHUB_URL = 'https://github.com/Dynamic-API-Platform';
-const DEVELOPER_URL = 'https://github.com/Developer-RU';
-
-const WASH_DOCS_URL = 'https://developer-ru.github.io/WASH-PRO-CRM/';
-const WASH_GITHUB_ORG_URL = 'https://github.com/Developer-RU';
-const WASH_GITHUB_REPO_URL = 'https://github.com/Developer-RU/WASH-PRO-CRM';
-
-const washEmbedded = import.meta.env.VITE_WASH_EMBEDDED === 'true';
-
-type ResourceLink = { href: string; label: string };
-
-const defaultResources: ResourceLink[] = [
-  { href: DOCS_URL, label: 'Documentation' },
-  { href: GITHUB_URL, label: 'GitHub' },
-  { href: DEVELOPER_URL, label: 'Developer' },
-];
-
-const washResources: ResourceLink[] = [
-  { href: WASH_DOCS_URL, label: 'WASH PRO CRM Docs' },
-  { href: WASH_GITHUB_ORG_URL, label: 'Developer-RU' },
-  { href: WASH_GITHUB_REPO_URL, label: 'WASH-PRO-CRM' },
-];
 
 function externalLinkClass() {
   return 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200';
@@ -101,7 +80,6 @@ export default function Layout({ children }: { children: ReactNode }) {
   const themeLabel = getThemeOption(theme)?.label ?? theme;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [appVersion, setAppVersion] = useState('');
-  const resourceLinks = washEmbedded ? washResources : defaultResources;
 
   useEffect(() => {
     fetch('/api/health')
@@ -170,22 +148,24 @@ export default function Layout({ children }: { children: ReactNode }) {
             Resources
           </div>
           <div className="space-y-0.5">
-            {resourceLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={externalLinkClass()}
-              >
-                {link.label === 'Documentation' || link.label === 'WASH PRO CRM Docs' ? (
-                  <BookOpen className="h-4 w-4 shrink-0" />
-                ) : (
-                  <Github className="h-4 w-4 shrink-0" />
-                )}
-                {link.label}
-              </a>
-            ))}
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={externalLinkClass()}
+            >
+              <BookOpen className="h-4 w-4 shrink-0" />
+              Documentation
+            </a>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={externalLinkClass()}
+            >
+              <Github className="h-4 w-4 shrink-0" />
+              GitHub
+            </a>
           </div>
         </div>
       </aside>

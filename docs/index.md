@@ -11,36 +11,35 @@ layout: default
   </p>
 </div>
 
-**Локальная система управления автомойками самообслуживания** — мониторинг постов, карты клиентов, статистика, финансы, резервное копирование и Telegram-уведомления.
-
-Построена на [Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform): все CRM-данные хранятся в MongoDB и доступны через REST API, а контроллеры постов отправляют телеметрию через RabbitMQ.
+**Локальная система управления автомойками самообслуживания** — мониторинг постов в реальном времени, карты клиентов, аналитика, финансы, справочники валют и типов скидок, архивирование и Telegram-уведомления.
 
 <p class="quick-links">
   <a href="{{ '/getting-started/' | relative_url }}">Быстрый старт</a> ·
   <a href="{{ '/architecture/' | relative_url }}">Архитектура</a> ·
   <a href="{{ '/dashboard/' | relative_url }}">Dashboard</a> ·
-  <a href="{{ '/rabbitmq/' | relative_url }}">RabbitMQ</a>
+  <a href="{{ '/database-schema/' | relative_url }}">Схема данных</a>
 </p>
 
 ## Возможности
 
 | Модуль | Описание |
 |--------|----------|
-| **Автомойки и посты** | Справочник объектов; серийный номер привязан к посту |
-| **SCADA** | Текущее состояние постов в реальном времени |
-| **Карты** | Обычные, безлимитные и служебные карты |
-| **Статистика** | Использование и финансы по периодам |
-| **Архив** | Политики хранения 30/90/180/365 дней |
-| **Резервные копии** | Автоматический `mongodump` по расписанию |
+| **Обзор** | KPI, графики выручки и использования, уведомления |
+| **Объекты и посты** | Автомойки, посты с серийным номером контроллера |
+| **SCADA** | Текущее состояние всех постов, live-таймер режима |
+| **Карты** | Скидочные, сервисные, VIP; привязка к посту |
+| **Аналитика** | Использование и финансы до/после инкассации |
+| **Справочники** | Валюты, типы скидок (1–5) |
+| **Архив и бэкапы** | Политики хранения, `mongodump` по расписанию |
 | **Telegram** | Бот для администраторов |
-| **Уведомления** | Web + Telegram |
+| **Live-данные** | Автообновление без перезагрузки страницы |
 
 ## Стек
 
 | Компонент | Технология |
 |-----------|------------|
 | API | Dynamic API Platform **v1.5.6** (Node.js + MongoDB) |
-| Dashboard | React + TypeScript + Vite |
+| Dashboard | React 18 + TypeScript + Vite + Tailwind |
 | Очередь | RabbitMQ |
 | Обработка телеметрии | message-processor (Node.js) |
 | Инфраструктура | Docker Compose |
@@ -63,24 +62,32 @@ chmod +x scripts/*.sh
 
 **Логин по умолчанию:** `admin` / `Admin123!` — смените в `.env` перед production.
 
+### Демо-данные (опционально)
+
+```bash
+./scripts/generate-demo-data.sh
+./scripts/generate-demo-cards.sh
+```
+
 ## Структура репозитория
 
 ```
 WASH-PRO-CRM/
 ├── dashboard/              # React CRM Dashboard
-├── dynamic-api/            # Dynamic API Platform (submodule / clone)
+├── dynamic-api/            # Dynamic API Platform (vendored)
 ├── services/
-│   ├── init-seed/          # CRM endpoints + RBAC
+│   ├── init-seed/          # CRM endpoints, RBAC, seed
 │   ├── message-processor/  # RabbitMQ → API
-│   ├── backup/             # Резервное копирование
+│   ├── backup/
 │   └── telegram-bot/
 ├── config/rabbitmq/
-├── scripts/
+├── scripts/                # start, seed, demo data, backup
 ├── docs/                   # Документация (GitHub Pages)
+├── wiki/                   # Копия для GitHub Wiki
 └── docker-compose.yml
 ```
 
 ## Лицензия
 
 WASH PRO CRM — проприетарный проект.  
-[Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) распространяется под Apache License 2.0.
+[Dynamic API Platform](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform) — Apache License 2.0.

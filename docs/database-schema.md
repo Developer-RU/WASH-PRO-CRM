@@ -26,43 +26,70 @@ description: CRM endpoints и коллекции MongoDB
 | Состояние и SCADA | `/api/crm/post-states` |
 | Карты клиентов | `/api/crm/cards` |
 | Статистика | `/api/crm/usage-stats`, `/api/crm/finance-stats` |
+| Валюты | `/api/crm/currencies` |
+| Типы скидок | `/api/crm/discount-types` |
 | Настройки | `/api/crm/settings` |
 | Уведомления | `/api/crm/notifications` |
 | Резервное копирование | `/api/crm/backups`, `/api/crm/archive-logs` |
 | Телеметрия | `/api/crm/telemetry` |
 
+Всего **52** CRM endpoint-определения (CRUD + списки). `init-seed` создаёт и обновляет их идемпотентно.
+
 ## CRM Endpoints (данные в `endpointdatas`)
 
-| Ресурс | Path | Поля |
-|--------|------|------|
+| Ресурс | Path | Основные поля |
+|--------|------|---------------|
 | Автомойки | `/api/crm/washes` | name, description, address, registeredAt, cloudEnabled |
-| Посты | `/api/crm/posts` | washId, postNumber, name, serialNumber, status, settings |
-| Состояние постов | `/api/crm/post-states` | postId, washId, mode, modeName, modeNumber, freePause, paidPause, modeTime, equipmentState, lastMessageAt, connected |
-| Карты | `/api/crm/cards` | cardNumber, cardType, balance, discount, status, washId, postId |
-| Статистика | `/api/crm/usage-stats` | washId, postId, period, category, launchCount, usageTime, avgWashTime, clientCount |
-| Финансы | `/api/crm/finance-stats` | washId, postId, period, cash, cashless, discountOps, totalRevenue, avgCheck |
+| Посты | `/api/crm/posts` | washId, postNumber, name, serialNumber, settings |
+| Состояние постов | `/api/crm/post-states` | postId, washId, mode, modeName, modeNumber, freePause, paidPause, balance, discount, modeTime, equipmentState, lastMessageAt, connected |
+| Карты | `/api/crm/cards` | cardNumber, cardType (`regular`\|`service`\|`unlimited`), balance, discount, discountType (номер 1–5), status (`success`\|`rejected`), washId, postId, createdAt, validFrom, validUntil |
+| Статистика использования | `/api/crm/usage-stats` | washId, postId, period (`before_collection`\|`after_collection`), category (`regular`\|`service`\|`unlimited`), launchCount, usageTime, avgWashTime, clientCount, recordedAt |
+| Финансы | `/api/crm/finance-stats` | washId, postId, period, cash, cashless, discountOps, totalRevenue, avgCheck, recordedAt |
+| Валюты | `/api/crm/currencies` | code, name, symbol, isDefault |
+| Типы скидок | `/api/crm/discount-types` | number (1–5), name |
 | Настройки | `/api/crm/settings` | key (backup/archive/telegram/notifications), value (JSON) |
-| Уведомления | `/api/crm/notifications` | type, severity, message, read, channels |
-| Резервные копии | `/api/crm/backups` | filename, size, type, status |
-| Архив | `/api/crm/archive-logs` | action, recordsAffected, policyDays |
-| Телеметрия | `/api/crm/telemetry` | washSerial, postSerial, messageType, payload |
+| Уведомления | `/api/crm/notifications` | type, severity, message, read, channels, washId, postId, createdAt |
+| Резервные копии | `/api/crm/backups` | filename, size, type (`manual`\|`auto`), status (`completed`\|`failed`\|`in_progress`), createdAt, error |
+| Архив | `/api/crm/archive-logs` | action, recordsAffected, policyDays, groupKey |
+| Телеметрия | `/api/crm/telemetry` | washSerial, postSerial, messageType, payload, receivedAt |
+
+### Справочник типов скидок (по умолчанию)
+
+| № | Название |
+|---|----------|
+| 1 | Карта такси |
+| 2 | Постоянный клиент |
+| 3 | Корпоративный клиент |
+| 4 | Сотрудник |
+| 5 | Промоакция |
+
+В картах поле `discountType` хранит номер (`"1"` … `"5"`); Dashboard подставляет название из справочника.
+
+## Каскадное удаление
+
+`DELETE /api/crm/posts/:id` удаляет пост и связанные записи: состояния, карты, статистику, уведомления, телеметрию (JS handler в endpoint).
 
 ## RBAC
 
 | Роль | Группа Dynamic API | Права |
 |------|-------------------|-------|
-| Administrator | Administrator / Super Admin | Полный доступ |
+| Administrator | Administrator | Полный доступ |
 | Operator | Operator | view, create, update |
-| Viewer | Viewer / User | view |
+| Viewer | Viewer | view |
+| Service | Service | view, create, update, delete, manage_api (внутренние сервисы) |
 
-Внутренний service account (`Service`) используется message-processor, backup и telegram-bot.
+Внутренний service account используется message-processor, backup и telegram-bot.
 
 ## Резервное копирование
 
-Файлы бэкапов: Docker volume `wash_backup_data` → `/backups` в контейнере `wash-backup`.
-
+Файлы: Docker volume `wash_backup_data` → `/backups` в контейнере `wash-backup`.  
 Формат: `mongodump --archive --gzip`
 
-## Миграции
+## Миграции и seed
 
-При обновлении контейнер `init-seed` создаёт недостающие endpoints и группы (идемпотентно).
+При старте `init-seed`:
+
+- создаёт группы endpoints и CRM endpoints;
+- настраивает RBAC;
+- добавляет настройки по умолчанию, валюту RUB и типы скидок 1–5;
+- идемпотентен — безопасно запускать повторно (`./scripts/run-init-seed.sh`).

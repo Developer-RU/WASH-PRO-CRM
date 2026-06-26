@@ -8,7 +8,6 @@ P="$ROOT/patches/wash-embedded"
 
 cp "$P/WashSoftwareUpdatesSection.tsx" "$DA/frontend/src/components/"
 cp "$P/UpdateBanner.tsx" "$DA/frontend/src/components/"
-cp "$P/Layout.tsx" "$DA/frontend/src/components/"
 
 # vite-env.d.ts — VITE_WASH_EMBEDDED
 if ! grep -q 'VITE_WASH_EMBEDDED' "$DA/frontend/src/vite-env.d.ts" 2>/dev/null; then

@@ -34,12 +34,16 @@
 
 ## Возможности
 
-- Управление автомойками и постами (серийный номер — у поста)
-- SCADA: текущее состояние постов в реальном времени
-- Карты клиентов, статистика использования и финансов
-- Архивирование, резервное копирование MongoDB
-- Telegram-бот и уведомления
-- RBAC: Administrator / Operator / Viewer
+- **Обзор** — KPI, графики, live-уведомления; агрегация по последним записям каждого поста
+- **Объекты и посты** — автомойки, посты с серийным номером контроллера, каскадное удаление
+- **SCADA** — текущее состояние всех постов, live-таймер режима, баланс и скидка
+- **Карты** — скидочные / сервисные / VIP, привязка к посту, типы скидок 1–5
+- **Аналитика** — использование и финансы до/после инкассации
+- **Справочники** — валюты (`/api/crm/currencies`), типы скидок (`/api/crm/discount-types`)
+- **Архивирование** и резервное копирование MongoDB
+- **Telegram-бот** и уведомления
+- **Live-режим** — автообновление данных без перезагрузки (3–15 с)
+- **RBAC:** Administrator / Operator / Viewer
 
 ## Архитектура
 
@@ -105,13 +109,14 @@ RABBITMQ_EXTERNAL_PORT=5672 docker compose -f docker-compose.yml -f docker-compo
 |--------|----------|
 | [Быстрый старт](docs/getting-started.md) | Установка и первый вход |
 | [Архитектура](docs/architecture.md) | Сервисы и потоки данных |
-| [Dashboard](docs/dashboard.md) | Модули веб-интерфейса |
+| [Dashboard](docs/dashboard.md) | Модули веб-интерфейса, live-режим, таблицы |
 | [RabbitMQ](docs/rabbitmq.md) | Интеграция контроллеров |
-| [Схема данных](docs/database-schema.md) | CRM endpoints и MongoDB |
+| [Схема данных](docs/database-schema.md) | CRM endpoints, валюты, типы скидок |
 | [Развёртывание](docs/deployment.md) | Production и обновление |
 | [Конфигурация](docs/configuration.md) | Переменные `.env` |
 | [Безопасность](docs/security.md) | RBAC и рекомендации |
 | [Устранение неполадок](docs/troubleshooting.md) | Типичные проблемы |
+| [Wiki](wiki/Home.md) | Краткие страницы для GitHub Wiki |
 
 ### Публикация GitHub Pages
 
@@ -132,8 +137,17 @@ WASH-PRO-CRM/
 │   ├── backup/
 │   └── telegram-bot/
 ├── config/rabbitmq/
-├── scripts/
-└── docs/                     # Документация (GitHub Pages)
+├── scripts/                  # start, seed, demo data, backup
+├── docs/                     # Документация (GitHub Pages)
+├── wiki/                     # Страницы для GitHub Wiki
+└── docker-compose.yml
+```
+
+### Демо-данные
+
+```bash
+./scripts/generate-demo-data.sh    # автомойки, посты, статистика
+./scripts/generate-demo-cards.sh   # карты с типами скидок 1–5
 ```
 
 ## Обновление и бэкап

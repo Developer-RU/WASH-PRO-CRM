@@ -108,6 +108,19 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
   border-top: 1px solid var(--border);
   font-size: 0.8rem;
   color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: auto;
+}
+
+.sidebar-resources-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 0 0.75rem 0.25rem;
 }
 
 .sidebar-footer a { color: var(--muted); }

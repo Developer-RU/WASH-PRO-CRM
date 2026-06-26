@@ -19,6 +19,8 @@ import {
   Sun,
   Menu,
   X,
+  BookOpen,
+  Github,
   type LucideIcon,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -82,6 +84,11 @@ const navGroups: NavGroup[] = [
   },
 ];
 
+const resourceLinks = [
+  { href: 'https://developer-ru.github.io/WASH-PRO-CRM/', label: 'Документация', icon: BookOpen },
+  { href: 'https://github.com/Developer-RU/WASH-PRO-CRM', label: 'WASH-PRO-CRM', icon: Github },
+] as const;
+
 export function Layout() {
   const { user, logout, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -99,11 +106,11 @@ export function Layout() {
   );
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform dark:border-slate-800 dark:bg-slate-900 lg:static lg:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-slate-200 bg-white transition-transform dark:border-slate-800 dark:bg-slate-900',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         <div className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-200 px-5 dark:border-slate-800">
@@ -113,7 +120,7 @@ export function Layout() {
             <div className="text-xs text-slate-500">SCADA система</div>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto p-3">
+        <nav className="min-h-0 flex-1 overflow-y-auto p-3">
           {filteredGroups.map((group) => (
             <div key={group.title} className="mb-4 last:mb-0">
               <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -143,15 +150,35 @@ export function Layout() {
             </div>
           ))}
         </nav>
+
+        <div className="shrink-0 border-t border-slate-200 p-3 dark:border-slate-800">
+          <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Resources
+          </div>
+          <div className="space-y-0.5">
+            {resourceLinks.map(({ href, label, icon: Icon }) => (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              >
+                <Icon size={18} />
+                {label}
+              </a>
+            ))}
+          </div>
+        </div>
       </aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:ml-64">
         <LiveModeProvider>
-          <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
+          <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
             <button className="lg:hidden" onClick={() => setMobileOpen((v) => !v)}>
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -170,7 +197,7 @@ export function Layout() {
               </button>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 lg:p-6">
+          <main className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
             <Outlet />
           </main>
         </LiveModeProvider>

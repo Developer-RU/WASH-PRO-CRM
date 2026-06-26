@@ -47,7 +47,16 @@ chmod +x scripts/*.sh
 2. Добавьте **посты** с уникальным **серийным номером** — по нему контроллер идентифицируется в RabbitMQ.
 3. При необходимости настройте Telegram в разделе **Telegram** (токен бота, ID администраторов).
 
-Контейнер `init-seed` автоматически создаёт CRM endpoints, RBAC-группы и настройки по умолчанию. Статус `Exited (0)` — норма.
+Контейнер `init-seed` автоматически создаёт CRM endpoints, RBAC-группы, валюту RUB и типы скидок 1–5. Статус `Exited (0)` — норма.
+
+### Демо-данные (опционально)
+
+```bash
+./scripts/generate-demo-data.sh
+./scripts/generate-demo-cards.sh
+```
+
+Переменные `CARD_REGULAR_COUNT`, `CARD_SERVICE_COUNT`, `CARD_VIP_COUNT` — в `generate-demo-cards.mjs`.
 
 ## Опции запуска
 
