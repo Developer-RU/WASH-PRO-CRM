@@ -24,12 +24,25 @@ import { resolveLogSource, shouldSkipApiAuditLog } from '../utils/logSource';
 import { resolveLogUserId, compactLogEntry } from '../utils/auditLog';
 import { LogSource } from '../types';
 import { CreateEndpointDto, UpdateEndpointDto, CreateEndpointGroupDto, UpdateEndpointGroupDto, TestEndpointDto } from '../dto';
-import { IEndpoint } from '../models';
+import { IEndpoint, IEndpointData } from '../models';
 import { JwtPayload, HttpMethod, TestEndpointResult, Permission, SchemaField, NetworkAccessRules } from '../types';
 import { authService } from './auth.service';
 import { userService, groupService } from './user.service';
 import { handlerRuntime } from './handler-runtime.service';
 import { webhookService } from './webhook.service';
+
+function serializeEndpointRecord(record: IEndpointData): Record<string, unknown> {
+  const docCreatedAt =
+    record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt;
+  const docUpdatedAt =
+    record.updatedAt instanceof Date ? record.updatedAt.toISOString() : record.updatedAt;
+  return {
+    id: record._id.toString(),
+    ...record.data,
+    createdAt: (record.data.createdAt as string | undefined) ?? docCreatedAt,
+    updatedAt: (record.data.updatedAt as string | undefined) ?? docUpdatedAt,
+  };
+}
 
 function assertAnyPermission(user: JwtPayload | undefined, ...permissions: Permission[]): asserts user is JwtPayload {
   if (!user) throw new Error('Unauthorized');
@@ -578,7 +591,7 @@ export class DynamicEngine {
             throw new Error('Record not found');
           }
           const data = await this.populateReferences(
-            { id: record._id, ...record.data },
+            serializeEndpointRecord(record),
             endpoint.fields,
             populate
           );
@@ -590,7 +603,7 @@ export class DynamicEngine {
           const result = await endpointDataRepository.findByPath(collectionPath, page, limit);
           const data = await Promise.all(
             result.data.map((item) =>
-              this.populateReferences({ id: item._id, ...item.data }, endpoint.fields, populate)
+              this.populateReferences(serializeEndpointRecord(item), endpoint.fields, populate)
             )
           );
           return {
@@ -613,7 +626,7 @@ export class DynamicEngine {
           data,
           { expiresAt: computeExpiresAt(endpoint.dataRetentionDays) }
         );
-        return { success: true, data: { id: record._id, ...record.data } };
+        return { success: true, data: serializeEndpointRecord(record) };
       }
 
       case 'PUT':
@@ -641,7 +654,7 @@ export class DynamicEngine {
         const sanitized = pickSchemaData(merged as Record<string, unknown>, endpoint.fields);
         await this.assertReferences(sanitized, endpoint.fields);
         const updated = await endpointDataRepository.update(idParam, sanitized);
-        return { success: true, data: { id: updated!._id, ...updated!.data } };
+        return { success: true, data: serializeEndpointRecord(updated!) };
       }
 
       case 'DELETE': {

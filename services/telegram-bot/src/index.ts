@@ -88,9 +88,9 @@ async function handleCommand(command: string, config: TelegramConfig): Promise<s
       return `<b>Автомойки</b>\n` + washes.map((w) => `• ${w.name} — ${w.address}`).join('\n');
     }
     case '/posts': {
-      const posts = await apiGet<Array<{ name: string; postNumber: number; status: string }>>('/api/crm/posts?limit=100');
+      const posts = await apiGet<Array<{ name: string; postNumber: number }>>('/api/crm/posts?limit=100');
       if (!posts.length) return 'Постов нет';
-      return `<b>Посты</b>\n` + posts.map((p) => `• #${p.postNumber} ${p.name} [${p.status}]`).join('\n');
+      return `<b>Посты</b>\n` + posts.map((p) => `• #${p.postNumber} ${p.name}`).join('\n');
     }
     case '/revenue': {
       const stats = await apiGet<Array<{ totalRevenue: number; period: string }>>('/api/crm/finance-stats?limit=50');

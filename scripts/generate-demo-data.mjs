@@ -15,7 +15,6 @@ const WASH_COUNT = Number(process.env.WASH_COUNT || 30);
 const POST_COUNT = Number(process.env.POST_COUNT || 100);
 const STATS_PER_PERIOD = Number(process.env.STATS_PER_PERIOD || 50);
 
-const STATUSES = ['online', 'offline', 'error', 'maintenance'];
 const CATEGORIES = ['regular', 'service', 'unlimited'];
 const STREETS = ['Ленина', 'Мира', 'Советская', 'Победы', 'Гагарина', 'Кирова', 'Садовая', 'Новая', 'Центральная', 'Заречная'];
 const CITIES = ['Москва', 'Санкт-Петербург', 'Казань', 'Новосибирск', 'Екатеринбург', 'Краснодар', 'Самара', 'Воронеж', 'Ростов-на-Дону', 'Уфа'];
@@ -92,7 +91,6 @@ async function main() {
       postNumber,
       name: `Пост ${postNumber}`,
       serialNumber: `SN-${wash.id.slice(-6)}-${String(i).padStart(4, '0')}`,
-      status: pick(STATUSES),
       settings: {},
     };
     const created = await api(token, 'POST', '/api/crm/posts', body);
@@ -149,6 +147,8 @@ async function main() {
 
   console.log('Done.');
   console.log(`Summary: ${washes.length} washes, ${posts.length} posts, ${STATS_PER_PERIOD * 2} finance + ${STATS_PER_PERIOD * 2} usage records`);
+  console.log('');
+  console.log('Tip: run scripts/generate-demo-cards.sh to seed cards linked to posts');
 }
 
 main().catch((err) => {

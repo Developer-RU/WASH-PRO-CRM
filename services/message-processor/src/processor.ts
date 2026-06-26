@@ -75,6 +75,8 @@ async function handlePostState(
     modeNumber: Number(payload.modeNumber ?? payload.mode_number ?? 0),
     freePause: Number(payload.freePause ?? payload.free_pause ?? 0),
     paidPause: Number(payload.paidPause ?? payload.paid_pause ?? 0),
+    balance: Number(payload.balance ?? payload.currentBalance ?? payload.current_balance ?? 0),
+    discount: Number(payload.discount ?? 0),
     modeTime: Number(payload.modeTime ?? payload.mode_time ?? 0),
     equipmentState: payload.equipmentState || payload.equipment_state || {},
     lastMessageAt: receivedAt,
@@ -87,8 +89,6 @@ async function handlePostState(
   } else {
     await apiRequest('POST', '/api/crm/post-states', stateData);
   }
-
-  await apiRequest('PATCH', `/api/crm/posts/${postId}`, { status: 'online' });
 }
 
 async function handleCard(
@@ -107,7 +107,7 @@ async function handleCard(
     cardType: String(payload.cardType || payload.card_type || 'regular'),
     balance: Number(payload.balance ?? 0),
     discount: Number(payload.discount ?? 0),
-    status: String(payload.status || 'active'),
+    status: String(payload.status || 'success'),
     washId,
     postId,
   };
@@ -116,6 +116,16 @@ async function handleCard(
     await apiRequest('PUT', `/api/crm/cards/${existing.id}`, cardData);
   } else {
     await apiRequest('POST', '/api/crm/cards', cardData);
+  }
+
+  const postState = await findPostState(postId);
+  const balancePatch = {
+    balance: cardData.balance,
+    discount: cardData.discount,
+    lastMessageAt: new Date().toISOString(),
+  };
+  if (postState) {
+    await apiRequest('PATCH', `/api/crm/post-states/${postState.id}`, balancePatch);
   }
 }
 
@@ -188,10 +198,6 @@ async function handleEquipment(
   } else {
     await apiRequest('POST', '/api/crm/post-states', patch);
   }
-
-  if (hasError) {
-    await apiRequest('PATCH', `/api/crm/posts/${postId}`, { status: 'error' });
-  }
 }
 
 async function handleEvent(
@@ -203,7 +209,6 @@ async function handleEvent(
   const severity = eventType === 'connection_lost' ? 'warning' : 'error';
 
   if (eventType === 'connection_lost') {
-    await apiRequest('PATCH', `/api/crm/posts/${postId}`, { status: 'offline' });
     const existing = await findPostState(postId);
     if (existing) {
       await apiRequest('PATCH', `/api/crm/post-states/${existing.id}`, {

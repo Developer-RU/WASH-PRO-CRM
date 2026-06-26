@@ -1,10 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { apiList } from '../api/client';
 import { PageHeader, Loading, StatCard, periodLabel, categoryLabel } from '../components/UI';
-import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DEFAULT_LIVE_INTERVAL_MS } from '../constants/live';
 import { usePolling } from '../hooks/usePolling';
-import { formatDurationHuman } from '../utils/format';
-import type { UsageStat } from '../types';
+import { formatDurationHuman, formatDateTime } from '../utils/format';
+import { createExportBulkAction } from '../utils/export';
+import {
+  latestUsageByPostAndCategory,
+  resolvePostNumber,
+  resolveStatWashAddress,
+} from '../utils/statsAggregation';
+import type { Post, UsageStat, Wash } from '../types';
 
 const USAGE_CATEGORIES = [
   { key: 'regular', label: 'Использование клиентами' },
@@ -12,14 +19,42 @@ const USAGE_CATEGORIES = [
   { key: 'unlimited', label: 'VIP-использование' },
 ] as const;
 
-function PeriodUsageSection({ title, stats }: { title: string; stats: UsageStat[] }) {
+interface UsagePageData {
+  stats: UsageStat[];
+  posts: Post[];
+  washes: Wash[];
+}
+
+function PeriodUsageSection({
+  title,
+  stats,
+  postById,
+  washById,
+}: {
+  title: string;
+  stats: UsageStat[];
+  postById: Map<string, Post>;
+  washById: Map<string, Wash>;
+}) {
+  const latest = useMemo(() => latestUsageByPostAndCategory(stats), [stats]);
+
   const totals = useMemo(() => {
     const result: Record<string, number> = { regular: 0, service: 0, unlimited: 0 };
-    stats.forEach((s) => {
+    latest.forEach((s) => {
       result[s.category] = (result[s.category] || 0) + (s.usageTime || 0);
     });
     return result;
-  }, [stats]);
+  }, [latest]);
+
+  const postNumber = useCallback(
+    (s: UsageStat) => resolvePostNumber(s.postId, postById),
+    [postById]
+  );
+
+  const address = useCallback(
+    (s: UsageStat) => resolveStatWashAddress(s.washId, s.postId, postById, washById),
+    [postById, washById]
+  );
 
   const categoryFilter: DataTableFilter<UsageStat> = useMemo(
     () => ({
@@ -37,6 +72,22 @@ function PeriodUsageSection({ title, stats }: { title: string; stats: UsageStat[
 
   const columns: DataTableColumn<UsageStat>[] = useMemo(
     () => [
+      {
+        key: 'post',
+        header: 'Пост',
+        sortable: true,
+        sortValue: (s) => Number(postNumber(s)) || 0,
+        searchValue: (s) => postNumber(s),
+        render: (s) => <span className="font-mono">{postNumber(s)}</span>,
+      },
+      {
+        key: 'address',
+        header: 'Адрес объекта',
+        sortable: true,
+        sortValue: (s) => address(s),
+        searchValue: (s) => address(s),
+        render: (s) => address(s),
+      },
       {
         key: 'category',
         header: 'Категория',
@@ -68,14 +119,26 @@ function PeriodUsageSection({ title, stats }: { title: string; stats: UsageStat[
       },
       {
         key: 'recordedAt',
-        header: 'Дата',
+        header: 'Дата и время',
         sortable: true,
         sortValue: (s) => s.recordedAt || '',
-        render: (s) => (s.recordedAt ? new Date(s.recordedAt).toLocaleString('ru') : '—'),
+        render: (s) => formatDateTime(s.recordedAt),
       },
     ],
-    []
+    [postNumber, address]
   );
+
+  const bulkActions = useMemo((): DataTableBulkAction<UsageStat>[] => [
+    createExportBulkAction(`usage-${title}.csv`, [
+      { header: 'Пост', value: (s) => postNumber(s) },
+      { header: 'Адрес объекта', value: (s) => address(s) },
+      { header: 'Категория', value: (s) => categoryLabel[s.category] || s.category },
+      { header: 'Время (сек)', value: (s) => String(s.usageTime ?? 0) },
+      { header: 'Запуски', value: (s) => String(s.launchCount ?? 0) },
+      { header: 'Клиенты', value: (s) => String(s.clientCount ?? 0) },
+      { header: 'Дата и время', value: (s) => s.recordedAt || '' },
+    ]),
+  ], [title, postNumber, address]);
 
   return (
     <section className="mb-8">
@@ -86,34 +149,52 @@ function PeriodUsageSection({ title, stats }: { title: string; stats: UsageStat[
             key={cat.key}
             label={cat.label}
             value={formatDurationHuman(totals[cat.key])}
+            hint="Сумма последних данных по каждому посту"
           />
         ))}
       </div>
-      <DataTable columns={columns} data={stats} rowKey={(s) => s.id} filters={[categoryFilter]} pageSize={10} emptyMessage="Нет записей" />
+      <DataTable columns={columns} data={stats} rowKey={(s) => s.id} filters={[categoryFilter]} pageSize={10} emptyMessage="Нет записей" bulkActions={bulkActions} />
     </section>
   );
 }
 
 export function UsagePage() {
-  const fetchStats = useCallback(() => apiList<UsageStat>('/crm/usage-stats'), []);
-  const { data: stats, loading } = usePolling(fetchStats, [], { intervalMs: 10000 });
+  const fetchData = useCallback(async (): Promise<UsagePageData> => {
+    const [stats, posts, washes] = await Promise.all([
+      apiList<UsageStat>('/crm/usage-stats'),
+      apiList<Post>('/crm/posts'),
+      apiList<Wash>('/crm/washes'),
+    ]);
+    return { stats, posts, washes };
+  }, []);
+
+  const { data, loading } = usePolling(fetchData, [], { intervalMs: DEFAULT_LIVE_INTERVAL_MS });
+
+  const postById = useMemo(
+    () => new Map((data?.posts || []).map((p) => [p.id, p])),
+    [data?.posts]
+  );
+  const washById = useMemo(
+    () => new Map((data?.washes || []).map((w) => [w.id, w])),
+    [data?.washes]
+  );
 
   const before = useMemo(
-    () => (stats || []).filter((s) => s.period === 'before_collection'),
-    [stats]
+    () => (data?.stats || []).filter((s) => s.period === 'before_collection'),
+    [data?.stats]
   );
   const after = useMemo(
-    () => (stats || []).filter((s) => s.period === 'after_collection'),
-    [stats]
+    () => (data?.stats || []).filter((s) => s.period === 'after_collection'),
+    [data?.stats]
   );
 
-  if (loading && !stats) return <Loading />;
+  if (loading && !data) return <Loading />;
 
   return (
     <div>
       <PageHeader title="Статистика использования" subtitle="Время в секундах, отображение в удобном формате" />
-      <PeriodUsageSection title={periodLabel.before_collection} stats={before} />
-      <PeriodUsageSection title={periodLabel.after_collection} stats={after} />
+      <PeriodUsageSection title={periodLabel.before_collection} stats={before} postById={postById} washById={washById} />
+      <PeriodUsageSection title={periodLabel.after_collection} stats={after} postById={postById} washById={washById} />
     </div>
   );
 }

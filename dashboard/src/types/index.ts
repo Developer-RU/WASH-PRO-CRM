@@ -22,33 +22,50 @@ export interface Wash {
   description?: string;
   address: string;
   registeredAt?: string;
+  createdAt?: string;
   cloudEnabled?: boolean;
 }
 
+export type WashRef = string | Wash;
+
+export interface PostRef {
+  id?: string;
+  _id?: string;
+  postNumber?: number;
+  name?: string;
+  washId?: WashRef;
+}
+
+export type PostIdRef = string | PostRef;
+
 export interface Post {
   id: string;
-  washId: string;
+  washId: WashRef;
   postNumber: number;
   name: string;
   serialNumber: string;
-  status: 'online' | 'offline' | 'error' | 'maintenance';
   settings?: Record<string, unknown>;
+  createdAt?: string;
 }
 
 export interface PostState {
   id: string;
-  postId: string;
-  washId: string;
+  postId: string | Post;
+  washId: WashRef;
   mode?: string;
   modeName?: string;
   modeNumber?: number;
   freePause?: number;
   paidPause?: number;
+  balance?: number;
+  discount?: number;
   modeTime?: number;
   equipmentState?: Record<string, unknown>;
   lastMessageAt?: string;
   connected?: boolean;
 }
+
+export type CardStatus = 'success' | 'rejected';
 
 export interface Card {
   id: string;
@@ -57,9 +74,9 @@ export interface Card {
   balance: number;
   discount: number;
   discountType?: string;
-  status: string;
-  washId?: string;
-  postId?: string;
+  status: CardStatus;
+  washId?: WashRef;
+  postId?: PostIdRef;
   createdAt?: string;
   validFrom?: string;
   validUntil?: string;
@@ -86,8 +103,8 @@ export interface ArchiveSettings {
 
 export interface UsageStat {
   id: string;
-  washId: string;
-  postId?: string;
+  washId: WashRef | string;
+  postId?: PostIdRef | string;
   period: 'before_collection' | 'after_collection';
   category: 'regular' | 'unlimited' | 'service';
   launchCount: number;
@@ -99,8 +116,8 @@ export interface UsageStat {
 
 export interface FinanceStat {
   id: string;
-  washId: string;
-  postId?: string;
+  washId: WashRef | string;
+  postId?: PostIdRef | string;
   period: 'before_collection' | 'after_collection';
   cash: number;
   cashless: number;
@@ -122,6 +139,14 @@ export interface Currency {
   name: string;
   symbol: string;
   isDefault: boolean;
+  createdAt?: string;
+}
+
+export interface DiscountType {
+  id: string;
+  number: number;
+  name: string;
+  createdAt?: string;
 }
 
 export interface Notification {

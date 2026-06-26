@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { HardDrive, Trash2 } from 'lucide-react';
 import { api, apiList } from '../api/client';
-import { PageHeader, Loading, Badge } from '../components/UI';
-import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { PageHeader, Loading, Badge, statusLabel } from '../components/UI';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { LIVE_INTERVAL_SLOW_MS } from '../constants/live';
 import { usePolling } from '../hooks/usePolling';
+import { formatDateTime } from '../utils/format';
 import type { BackupRecord } from '../types';
+import { createExportBulkAction } from '../utils/export';
 
 export function BackupsPage() {
   const [settings, setSettings] = useState({ enabled: true, cron: '0 2 * * *', retentionCount: 7 });
   const [settingId, setSettingId] = useState<string | null>(null);
+
+  const [creating, setCreating] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [backups, crmSettings] = await Promise.all([
@@ -19,7 +24,7 @@ export function BackupsPage() {
     return { backups, backupSetting };
   }, []);
 
-  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: 15000 });
+  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: LIVE_INTERVAL_SLOW_MS });
 
   useEffect(() => {
     if (data?.backupSetting) {
@@ -29,16 +34,21 @@ export function BackupsPage() {
   }, [data?.backupSetting]);
 
   const createManual = async () => {
-    await api('/crm/backups', {
-      method: 'POST',
-      body: JSON.stringify({
-        filename: `manual-${Date.now()}.pending`,
-        type: 'manual',
-        status: 'in_progress',
-        createdAt: new Date().toISOString(),
-      }),
-    });
-    refresh();
+    setCreating(true);
+    try {
+      await api('/crm/backups', {
+        method: 'POST',
+        body: JSON.stringify({
+          filename: `manual-${Date.now()}.pending`,
+          type: 'manual',
+          status: 'in_progress',
+          createdAt: new Date().toISOString(),
+        }),
+      });
+      refresh();
+    } finally {
+      setCreating(false);
+    }
   };
 
   const saveSettings = async () => {
@@ -68,9 +78,9 @@ export function BackupsPage() {
       id: 'status',
       label: 'Статус',
       options: [
-        { value: 'completed', label: 'completed' },
-        { value: 'failed', label: 'failed' },
-        { value: 'in_progress', label: 'in_progress' },
+        { value: 'completed', label: statusLabel.completed },
+        { value: 'failed', label: statusLabel.failed },
+        { value: 'in_progress', label: statusLabel.in_progress },
       ],
       match: (b, v) => b.status === v,
     },
@@ -114,16 +124,16 @@ export function BackupsPage() {
       sortValue: (b) => b.status,
       render: (b) => (
         <Badge variant={b.status === 'completed' ? 'success' : b.status === 'failed' ? 'error' : 'warning'}>
-          {b.status}
+          {statusLabel[b.status] || b.status}
         </Badge>
       ),
     },
     {
       key: 'createdAt',
-      header: 'Дата',
+      header: 'Дата и время',
       sortable: true,
       sortValue: (b) => b.createdAt || '',
-      render: (b) => (b.createdAt ? new Date(b.createdAt).toLocaleString('ru') : '—'),
+      render: (b) => formatDateTime(b.createdAt),
     },
     {
       key: 'actions',
@@ -141,6 +151,39 @@ export function BackupsPage() {
     },
   ];
 
+  const bulkActions: DataTableBulkAction<BackupRecord>[] = [
+    createExportBulkAction('backups.csv', [
+      { header: 'Файл', value: (b) => b.filename },
+      { header: 'Тип', value: (b) => b.type || '' },
+      { header: 'Размер', value: (b) => String(b.size ?? '') },
+      { header: 'Статус', value: (b) => b.status || '' },
+      { header: 'Дата и время', value: (b) => b.createdAt || '' },
+    ]),
+    {
+      id: 'delete',
+      label: 'Удалить',
+      variant: 'danger',
+      confirmMessage: (_rows, ids) => `Удалить ${ids.length} резервных копий?`,
+      onAction: async (rows) => {
+        for (const backup of rows) {
+          try {
+            await api(`/crm/backups/${backup.id}`, { method: 'DELETE' });
+          } catch {
+            await api(`/crm/backups/${backup.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({
+                status: 'failed',
+                error: 'deleted_by_user',
+                filename: `[deleted] ${backup.filename}`,
+              }),
+            });
+          }
+        }
+        refresh();
+      },
+    },
+  ];
+
   if (loading && !data) return <Loading />;
 
   return (
@@ -148,7 +191,11 @@ export function BackupsPage() {
       <PageHeader
         title="Резервные копии"
         subtitle="Автоматическое и ручное резервное копирование MongoDB"
-        actions={<button type="button" className="btn-primary" onClick={createManual}><HardDrive size={16} /> Создать копию</button>}
+        actions={
+          <button type="button" className="btn-primary" disabled={creating} onClick={createManual}>
+            <HardDrive size={16} /> {creating ? 'Запуск…' : 'Создать копию'}
+          </button>
+        }
       />
 
       <div className="card mb-6 max-w-lg space-y-3">
@@ -168,7 +215,7 @@ export function BackupsPage() {
         <button type="button" className="btn-primary" onClick={saveSettings}>Сохранить настройки</button>
       </div>
 
-      <DataTable columns={columns} data={data?.backups || []} rowKey={(b) => b.id} filters={filters} searchPlaceholder="Поиск копий…" />
+      <DataTable columns={columns} data={data?.backups || []} rowKey={(b) => b.id} filters={filters} searchPlaceholder="Поиск копий…" bulkActions={bulkActions} />
     </div>
   );
 }

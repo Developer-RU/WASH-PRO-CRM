@@ -1,9 +1,39 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, apiList } from '../api/client';
 import { PageHeader, Loading } from '../components/UI';
+import { LIVE_INTERVAL_SLOW_MS } from '../constants/live';
+import { usePolling } from '../hooks/usePolling';
 import type { CrmSetting } from '../types';
 
 const ALL_COMMANDS = ['/status', '/washes', '/posts', '/revenue', '/statistics', '/cards'];
+
+interface TelegramSettings {
+  token: string;
+  adminIds: string;
+  commands: string[];
+  enabled: boolean;
+  settingId: string | null;
+}
+
+function parseTelegramSettings(settings: CrmSetting[]): TelegramSettings {
+  const tg = settings.find((s) => s.key === 'telegram');
+  if (!tg) {
+    return { token: '', adminIds: '', commands: ALL_COMMANDS, enabled: false, settingId: null };
+  }
+  const v = tg.value as {
+    token?: string;
+    adminIds?: number[];
+    allowedCommands?: string[];
+    enabled?: boolean;
+  };
+  return {
+    token: v.token || '',
+    adminIds: (v.adminIds || []).join(', '),
+    commands: v.allowedCommands || ALL_COMMANDS,
+    enabled: v.enabled ?? false,
+    settingId: tg.id,
+  };
+}
 
 export function TelegramPage() {
   const [token, setToken] = useState('');
@@ -11,27 +41,24 @@ export function TelegramPage() {
   const [commands, setCommands] = useState<string[]>(ALL_COMMANDS);
   const [enabled, setEnabled] = useState(false);
   const [settingId, setSettingId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const formInitialized = useRef(false);
+
+  const fetchData = useCallback(async () => {
+    const settings = await apiList<CrmSetting>('/crm/settings');
+    return parseTelegramSettings(settings);
+  }, []);
+
+  const { data, loading } = usePolling(fetchData, [], { intervalMs: LIVE_INTERVAL_SLOW_MS });
 
   useEffect(() => {
-    apiList<CrmSetting>('/crm/settings').then((settings) => {
-      const tg = settings.find((s) => s.key === 'telegram');
-      if (tg) {
-        setSettingId(tg.id);
-        const v = tg.value as {
-          token?: string;
-          adminIds?: number[];
-          allowedCommands?: string[];
-          enabled?: boolean;
-        };
-        setToken(v.token || '');
-        setAdminIds((v.adminIds || []).join(', '));
-        setCommands(v.allowedCommands || ALL_COMMANDS);
-        setEnabled(v.enabled ?? false);
-      }
-      setLoading(false);
-    });
-  }, []);
+    if (!data || formInitialized.current) return;
+    setToken(data.token);
+    setAdminIds(data.adminIds);
+    setCommands(data.commands);
+    setEnabled(data.enabled);
+    setSettingId(data.settingId);
+    formInitialized.current = true;
+  }, [data]);
 
   const toggleCommand = (cmd: string) => {
     setCommands((prev) => (prev.includes(cmd) ? prev.filter((c) => c !== cmd) : [...prev, cmd]));
@@ -53,9 +80,10 @@ export function TelegramPage() {
       }),
     });
     alert('Настройки Telegram сохранены');
+    formInitialized.current = false;
   };
 
-  if (loading) return <Loading />;
+  if (loading && !data) return <Loading />;
 
   return (
     <div>
@@ -84,7 +112,7 @@ export function TelegramPage() {
             ))}
           </div>
         </div>
-        <button type="submit" className="btn-primary">Сохранить</button>
+        <button type="submit" className="btn-primary" disabled={!settingId}>Сохранить</button>
       </form>
     </div>
   );

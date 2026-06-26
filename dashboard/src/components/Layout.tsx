@@ -12,6 +12,7 @@ import {
   Bot,
   Bell,
   Coins,
+  Tags,
   FileText,
   LogOut,
   Moon,
@@ -24,6 +25,8 @@ import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { LiveModeProvider } from '../context/LiveModeContext';
+import { LiveModeIndicator } from './LiveModeIndicator';
 
 interface NavItem {
   to: string;
@@ -45,7 +48,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'Объекты',
     items: [
-      { to: '/washes', label: 'Объекты', icon: Building2 },
+      { to: '/washes', label: 'Автомойки самообслуживания', icon: Building2 },
       { to: '/posts', label: 'Посты', icon: Columns3 },
       { to: '/states', label: 'Текущее состояние', icon: Activity },
     ],
@@ -73,6 +76,7 @@ const navGroups: NavGroup[] = [
       { to: '/backups', label: 'Резервные копии', icon: HardDrive, admin: true },
       { to: '/telegram', label: 'Telegram', icon: Bot, admin: true },
       { to: '/currency', label: 'Валюты', icon: Coins, admin: true },
+      { to: '/discount-types', label: 'Типы скидок', icon: Tags, admin: true },
       { to: '/logs', label: 'Логи', icon: FileText, admin: true },
     ],
   },
@@ -146,25 +150,30 @@ export function Layout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
-          <button className="lg:hidden" onClick={() => setMobileOpen((v) => !v)}>
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-          <div className="text-sm text-slate-500">
-            {user?.name || user?.login}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme} className="btn-secondary !px-2" title="Тема">
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        <LiveModeProvider>
+          <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
+            <button className="lg:hidden" onClick={() => setMobileOpen((v) => !v)}>
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
-            <button onClick={() => logout()} className="btn-secondary !px-2" title="Выход">
-              <LogOut size={18} />
-            </button>
-          </div>
-        </header>
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
-          <Outlet />
-        </main>
+            <div className="flex items-center gap-3">
+              <LiveModeIndicator />
+              <div className="text-sm text-slate-500">
+                {user?.name || user?.login}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={toggleTheme} className="btn-secondary !px-2" title="Тема">
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <button onClick={() => logout()} className="btn-secondary !px-2" title="Выход">
+                <LogOut size={18} />
+              </button>
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto p-4 lg:p-6">
+            <Outlet />
+          </main>
+        </LiveModeProvider>
       </div>
     </div>
   );

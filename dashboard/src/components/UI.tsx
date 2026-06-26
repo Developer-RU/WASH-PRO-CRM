@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import clsx from 'clsx';
+export { CARD_STATUS_LABELS as cardStatusLabel } from '../utils/cards';
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
@@ -85,6 +86,9 @@ export const statusLabel: Record<string, string> = {
   offline: 'Офлайн',
   error: 'Ошибка',
   maintenance: 'Обслуживание',
+  in_progress: 'В процессе',
+  completed: 'Завершено',
+  failed: 'Ошибка',
 };
 
 export const periodLabel: Record<string, string> = {

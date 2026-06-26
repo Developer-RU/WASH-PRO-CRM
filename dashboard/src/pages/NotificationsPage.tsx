@@ -1,13 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { api, apiList } from '../api/client';
 import { PageHeader, Loading, Badge } from '../components/UI';
-import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DEFAULT_LIVE_INTERVAL_MS } from '../constants/live';
 import { usePolling } from '../hooks/usePolling';
+import { bulkPatch } from '../utils/bulk';
+import { createExportBulkAction } from '../utils/export';
+import { formatDateTime } from '../utils/format';
 import type { Notification } from '../types';
 
 export function NotificationsPage() {
   const fetchItems = useCallback(() => apiList<Notification>('/crm/notifications'), []);
-  const { data: items, loading, refresh } = usePolling(fetchItems, [], { intervalMs: 10000 });
+  const { data: items, loading, refresh } = usePolling(fetchItems, [], { intervalMs: DEFAULT_LIVE_INTERVAL_MS });
 
   const markRead = async (id: string) => {
     await api(`/crm/notifications/${id}`, {
@@ -86,9 +90,9 @@ export function NotificationsPage() {
       },
       {
         key: 'date',
-        header: 'Дата',
+        header: 'Дата и время',
         sortValue: (n) => n.createdAt || '',
-        render: (n) => (n.createdAt ? new Date(n.createdAt).toLocaleString('ru') : '—'),
+        render: (n) => formatDateTime(n.createdAt),
       },
       {
         key: 'actions',
@@ -104,6 +108,28 @@ export function NotificationsPage() {
     []
   );
 
+  const bulkActions = useMemo((): DataTableBulkAction<Notification>[] => [
+    createExportBulkAction('notifications.csv', [
+      { header: 'Тип', value: (n) => n.type },
+      { header: 'Важность', value: (n) => n.severity || '' },
+      { header: 'Сообщение', value: (n) => n.message },
+      { header: 'Каналы', value: (n) => (n.channels || []).join(', ') },
+      { header: 'Прочитано', value: (n) => (n.read ? 'да' : 'нет') },
+      { header: 'Дата и время', value: (n) => n.createdAt || '' },
+    ]),
+    {
+      id: 'mark-read',
+      label: 'Отметить прочитанными',
+      confirmMessage: (_rows, ids) => `Отметить ${ids.length} уведомлений как прочитанные?`,
+      disabled: (rows) => rows.every((n) => n.read),
+      onAction: async (rows) => {
+        const unread = rows.filter((n) => !n.read);
+        await bulkPatch('/crm/notifications', unread, (n) => n.id, { read: true });
+        refresh();
+      },
+    },
+  ], [refresh]);
+
   if (loading && !items) return <Loading />;
 
   return (
@@ -115,6 +141,7 @@ export function NotificationsPage() {
         rowKey={(n) => n.id}
         filters={filters}
         searchPlaceholder="Поиск уведомлений…"
+        bulkActions={bulkActions}
       />
     </div>
   );

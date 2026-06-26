@@ -21,6 +21,7 @@ import { BackupsPage } from './pages/BackupsPage';
 import { TelegramPage } from './pages/TelegramPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { CurrencyPage } from './pages/CurrencyPage';
+import { DiscountTypesPage } from './pages/DiscountTypesPage';
 import { LogsPage } from './pages/LogsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -65,6 +66,7 @@ function AppRoutes() {
         <Route path="backups" element={<AdminRoute><BackupsPage /></AdminRoute>} />
         <Route path="telegram" element={<AdminRoute><TelegramPage /></AdminRoute>} />
         <Route path="currency" element={<AdminRoute><CurrencyPage /></AdminRoute>} />
+        <Route path="discount-types" element={<AdminRoute><DiscountTypesPage /></AdminRoute>} />
         <Route path="logs" element={<AdminRoute><LogsPage /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

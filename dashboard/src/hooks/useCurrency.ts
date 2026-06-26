@@ -12,7 +12,10 @@ function toConfig(c: Currency): CurrencyConfig {
 
 export function useCurrency() {
   const fetchCurrencies = useCallback(() => apiList<Currency>('/crm/currencies'), []);
-  const { data: currencies, loading, refresh } = usePolling(fetchCurrencies, [], { intervalMs: 30000 });
+  const { data: currencies, loading, refresh } = usePolling(fetchCurrencies, [], {
+    intervalMs: 30000,
+    live: false,
+  });
 
   const currency = useMemo(() => {
     const list = currencies || [];

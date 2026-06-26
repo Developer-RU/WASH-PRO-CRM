@@ -1,11 +1,16 @@
 import { useCallback, useMemo } from 'react';
 import { apiList } from '../api/client';
 import { PageHeader, StatCard, Loading, Badge } from '../components/UI';
-import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
 import { DashboardCharts } from '../components/DashboardCharts';
+import { LIVE_INTERVAL_DASHBOARD_MS } from '../constants/live';
 import { usePolling } from '../hooks/usePolling';
 import { useCurrency } from '../hooks/useCurrency';
 import { formatMoney } from '../utils/format';
+import { bulkPatch } from '../utils/bulk';
+import { createExportBulkAction } from '../utils/export';
+import { refId } from '../utils/refs';
+import { latestFinanceByPost } from '../utils/statsAggregation';
 import type { Wash, Post, PostState, Notification, UsageStat, FinanceStat } from '../types';
 
 interface DashboardData {
@@ -32,25 +37,59 @@ export function DashboardPage() {
     return { washes, posts, states, notifications, usageStats, financeStats };
   }, []);
 
-  const { data, loading } = usePolling(fetchData, [], { intervalMs: 5000 });
+  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: LIVE_INTERVAL_DASHBOARD_MS });
 
   const finance = useMemo(() => {
     if (!data) return { cash: 0, cashless: 0, revenue: 0, discounts: 0 };
-    const before = data.financeStats.filter((s) => s.period === 'before_collection');
+    const current = data.financeStats.filter((s) => s.period === 'before_collection');
+    const latest = latestFinanceByPost(current);
     return {
-      cash: before.reduce((s, x) => s + (x.cash || 0), 0),
-      cashless: before.reduce((s, x) => s + (x.cashless || 0), 0),
-      revenue: before.reduce((s, x) => s + (x.totalRevenue || 0), 0),
-      discounts: before.reduce((s, x) => s + (x.discountOps || 0), 0),
+      cash: latest.reduce((s, x) => s + (x.cash || 0), 0),
+      cashless: latest.reduce((s, x) => s + (x.cashless || 0), 0),
+      revenue: latest.reduce((s, x) => s + (x.totalRevenue || 0), 0),
+      discounts: latest.reduce((s, x) => s + (x.discountOps || 0), 0),
     };
+  }, [data]);
+
+  const beforeUsageStats = useMemo(
+    () => (data?.usageStats || []).filter((s) => s.period === 'before_collection'),
+    [data?.usageStats]
+  );
+
+  const beforeFinanceStats = useMemo(
+    () => (data?.financeStats || []).filter((s) => s.period === 'before_collection'),
+    [data?.financeStats]
+  );
+
+  const postCounts = useMemo(() => {
+    if (!data) return { online: 0, offline: 0, maintenance: 0, errors: 0 };
+    const stateByPost = new Map(data.states.map((s) => [refId(s.postId), s]));
+    let online = 0;
+    let offline = 0;
+    let maintenance = 0;
+    let errors = 0;
+
+    for (const post of data.posts) {
+      const state = stateByPost.get(post.id);
+      const equipment = state?.equipmentState as Record<string, unknown> | undefined;
+      const hasError = Boolean(equipment?.error || equipment?.hasError);
+      const isMaintenance = Boolean(equipment?.maintenance);
+
+      if (hasError) errors += 1;
+      else if (isMaintenance) maintenance += 1;
+      else if (state?.connected === true) online += 1;
+      else offline += 1;
+    }
+
+    return { online, offline, maintenance, errors };
   }, [data]);
 
   const activeErrors = useMemo(() => {
     if (!data) return 0;
-    const postErrors = data.posts.filter((p) => p.status === 'error').length;
+    const postErrors = postCounts.errors;
     const notifErrors = data.notifications.filter((n) => !n.read && n.severity === 'error').length;
     return postErrors + notifErrors;
-  }, [data]);
+  }, [data, postCounts.errors]);
 
   const notificationFilters: DataTableFilter<Notification>[] = useMemo(
     () => [
@@ -114,36 +153,53 @@ export function DashboardPage() {
     []
   );
 
+  const notificationBulkActions = useMemo((): DataTableBulkAction<Notification>[] => [
+    createExportBulkAction('notifications.csv', [
+      { header: 'Тип', value: (n) => n.type },
+      { header: 'Важность', value: (n) => n.severity || '' },
+      { header: 'Сообщение', value: (n) => n.message },
+      { header: 'Дата', value: (n) => n.createdAt || '' },
+    ]),
+    {
+      id: 'mark-read',
+      label: 'Отметить прочитанными',
+      disabled: (rows) => rows.every((n) => n.read),
+      onAction: async (rows) => {
+        const unread = rows.filter((n) => !n.read);
+        await bulkPatch('/crm/notifications', unread, (n) => n.id, { read: true });
+        refresh();
+      },
+    },
+  ], [refresh]);
+
   if (loading && !data) return <Loading />;
   if (!data) return <Loading />;
 
-  const online = data.posts.filter((p) => p.status === 'online').length;
-  const offline = data.posts.filter((p) => p.status === 'offline').length;
-  const errors = data.posts.filter((p) => p.status === 'error').length;
   const recentNotifications = [...data.notifications]
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, 50);
 
   return (
     <div>
-      <PageHeader title="Обзор" subtitle={`Версия ${import.meta.env.VITE_APP_VERSION || '1.0.0'}`} />
+      <PageHeader title="Обзор" subtitle={`До инкассации · ${data.posts.length} постов · ${data.washes.length} автомоек`} />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-        <StatCard label="Наличная выручка" value={formatMoney(finance.cash, currency)} />
-        <StatCard label="Безналичная выручка" value={formatMoney(finance.cashless, currency)} />
-        <StatCard label="Общая выручка" value={formatMoney(finance.revenue, currency)} />
-        <StatCard label="Сумма скидок" value={formatMoney(finance.discounts, currency)} />
+        <StatCard label="Наличная выручка" value={formatMoney(finance.cash, currency)} hint="До инкассации" />
+        <StatCard label="Безналичная выручка" value={formatMoney(finance.cashless, currency)} hint="До инкассации" />
+        <StatCard label="Общая выручка" value={formatMoney(finance.revenue, currency)} hint="До инкассации" />
+        <StatCard label="Сумма скидок" value={formatMoney(finance.discounts, currency)} hint="До инкассации" />
         <StatCard label="Активные ошибки" value={activeErrors} hint="Посты + непрочитанные уведомления" />
       </div>
 
       <DashboardCharts
         posts={data.posts}
-        usageStats={data.usageStats}
-        financeStats={data.financeStats}
+        usageStats={beforeUsageStats}
+        financeStats={beforeFinanceStats}
         currency={currency}
-        online={online}
-        offline={offline}
-        errorCount={errors}
+        online={postCounts.online}
+        offline={postCounts.offline}
+        maintenanceCount={postCounts.maintenance}
+        errorCount={postCounts.errors}
       />
 
       <div className="card">
@@ -156,6 +212,7 @@ export function DashboardPage() {
           searchPlaceholder="Поиск уведомлений…"
           pageSize={10}
           emptyMessage="Нет уведомлений"
+          bulkActions={notificationBulkActions}
         />
       </div>
     </div>

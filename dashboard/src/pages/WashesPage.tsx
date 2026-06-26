@@ -1,11 +1,16 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { api, apiList } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { LIVE_INTERVAL_SLOW_MS } from '../constants/live';
 import { usePolling } from '../hooks/usePolling';
 import { PageHeader, Loading, Modal, ErrorMessage } from '../components/UI';
-import { DataTable, type DataTableColumn } from '../components/DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn } from '../components/DataTable';
 import type { Wash, Post } from '../types';
+import { refId } from '../utils/refs';
+import { formatDateTime } from '../utils/format';
+import { bulkDelete } from '../utils/bulk';
+import { createExportBulkAction } from '../utils/export';
 
 const emptyForm = { name: '', description: '', address: '', registeredAt: undefined as string | undefined, cloudEnabled: false };
 
@@ -25,12 +30,13 @@ export function WashesPage() {
     return { washes, posts };
   }, []);
 
-  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: 15000 });
+  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: LIVE_INTERVAL_SLOW_MS });
 
   const postCountByWash = useMemo(() => {
     const map: Record<string, number> = {};
     data?.posts.forEach((p) => {
-      map[p.washId] = (map[p.washId] || 0) + 1;
+      const id = refId(p.washId);
+      map[id] = (map[id] || 0) + 1;
     });
     return map;
   }, [data?.posts]);
@@ -87,11 +93,11 @@ export function WashesPage() {
         render: (w) => w.address,
       },
       {
-        key: 'registeredAt',
-        header: 'Дата регистрации',
+        key: 'createdAt',
+        header: 'Дата создания',
         sortable: true,
-        sortValue: (w) => w.registeredAt || '',
-        render: (w) => (w.registeredAt ? new Date(w.registeredAt).toLocaleDateString('ru') : '—'),
+        sortValue: (w) => w.createdAt || w.registeredAt || '',
+        render: (w) => formatDateTime(w.createdAt || w.registeredAt),
       },
       {
         key: 'posts',
@@ -106,12 +112,22 @@ export function WashesPage() {
               key: 'actions',
               header: '',
               render: (w: Wash) => (
-                <div className="text-right">
-                  <button type="button" className="btn-secondary mr-2" onClick={() => openEdit(w)}>
-                    Изменить
+                <div className="flex justify-end gap-1">
+                  <button
+                    type="button"
+                    className="btn-secondary !px-2 !py-1"
+                    onClick={() => openEdit(w)}
+                    title="Изменить"
+                  >
+                    <Pencil size={14} />
                   </button>
-                  <button type="button" className="btn-secondary text-red-600" onClick={() => handleDelete(w.id)}>
-                    Удалить
+                  <button
+                    type="button"
+                    className="btn-secondary !px-2 !py-1 text-red-600"
+                    onClick={() => handleDelete(w.id)}
+                    title="Удалить"
+                  >
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ),
@@ -121,6 +137,31 @@ export function WashesPage() {
     ],
     [canEdit, postCountByWash]
   );
+
+  const bulkActions = useMemo((): DataTableBulkAction<Wash>[] => {
+    const actions: DataTableBulkAction<Wash>[] = [
+      createExportBulkAction('washes.csv', [
+        { header: 'Название', value: (w) => w.name },
+        { header: 'Адрес', value: (w) => w.address },
+        { header: 'Описание', value: (w) => w.description || '' },
+        { header: 'Дата создания', value: (w) => w.createdAt || w.registeredAt || '' },
+        { header: 'Постов', value: (w) => String(postCountByWash[w.id] || 0) },
+      ]),
+    ];
+    if (canEdit) {
+      actions.push({
+        id: 'delete',
+        label: 'Удалить',
+        variant: 'danger',
+        confirmMessage: (_rows, ids) => `Удалить ${ids.length} автомоек?`,
+        onAction: async (_rows, ids) => {
+          await bulkDelete('/crm/washes', ids);
+          refresh();
+        },
+      });
+    }
+    return actions;
+  }, [canEdit, postCountByWash, refresh]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -151,8 +192,8 @@ export function WashesPage() {
   return (
     <div>
       <PageHeader
-        title="Объекты"
-        subtitle="Управление объектами самообслуживания"
+        title="Автомойки самообслуживания"
+        subtitle="Управление автомойками самообслуживания"
         actions={canEdit && <button className="btn-primary" onClick={openCreate}><Plus size={16} /> Добавить</button>}
       />
       {error && <div className="mb-4"><ErrorMessage message={error} /></div>}
@@ -160,10 +201,11 @@ export function WashesPage() {
         columns={columns}
         data={data?.washes || []}
         rowKey={(w) => w.id}
-        searchPlaceholder="Поиск объектов…"
+        searchPlaceholder="Поиск автомоек…"
+        bulkActions={bulkActions}
       />
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Редактировать объект' : 'Новый объект'}>
+      <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Редактировать автомойку' : 'Новая автомойка'}>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div><label className="label">Название</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
           <div><label className="label">Описание</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>

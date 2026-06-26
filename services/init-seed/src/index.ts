@@ -3,9 +3,12 @@ import {
   CRM_ENDPOINTS,
   CRM_GROUPS,
   DEFAULT_CURRENCIES,
+  DEFAULT_DISCOUNT_TYPES,
   DEFAULT_SETTINGS,
   ENDPOINT_GROUPS,
   LEGACY_ENDPOINT_GROUP,
+  type EndpointHandler,
+  type SchemaField,
 } from './endpoints.js';
 
 const API_URL = process.env.API_URL || 'http://dynamic-api:3001';
@@ -230,24 +233,73 @@ function allowedGroupsForEndpoint(
 ): string[] {
   const restricted = ep.groupKey === 'telemetry' || ep.groupKey === 'backup';
   if (restricted) {
-    return groupsWithAnyPermission(allGroups, 'manage_api', 'delete');
+    return groupsWithAnyPermission(allGroups, 'manage_api', 'delete', 'update');
   }
   const dynamic = groupsWithAnyPermission(allGroups, 'update', 'delete', 'manage_api', 'manage_users');
   const named = groupIdsByNames(allGroups, SYSTEM_WRITE_GROUPS);
   return [...new Set([...named, ...dynamic])];
 }
 
+function resolveSchemaFields(
+  fields: SchemaField[],
+  endpointList: Array<{ _id: string; slug?: string }>
+): Array<{
+  name: string;
+  type: string;
+  required?: boolean;
+  order?: number;
+  description?: string;
+  refEndpointId?: string;
+}> {
+  return fields.map((f) => {
+    if (f.type === 'reference' && f.refEndpointSlug) {
+      const ref = endpointList.find((e) => e.slug === f.refEndpointSlug);
+      if (!ref) {
+        return {
+          name: f.name,
+          type: f.type,
+          required: f.required,
+          order: f.order,
+          description: f.description,
+        };
+      }
+      return {
+        name: f.name,
+        type: 'reference',
+        required: f.required,
+        order: f.order,
+        description: f.description,
+        refEndpointId: ref._id,
+      };
+    }
+    return {
+      name: f.name,
+      type: f.type,
+      required: f.required,
+      order: f.order,
+      description: f.description,
+    };
+  });
+}
+
 function schemaEquals(
-  a: Array<{ name: string; type: string; required?: boolean; order?: number }> | undefined,
-  b: Array<{ name: string; type: string; required?: boolean; order?: number }>
+  a: Array<{ name: string; type: string; required?: boolean; order?: number; refEndpointId?: string }> | undefined,
+  b: SchemaField[],
+  endpointList: Array<{ _id: string; slug?: string }>
 ): boolean {
-  const norm = (fields: typeof b) =>
+  const norm = (fields: Array<{ name: string; type: string; required?: boolean; order?: number; refEndpointId?: string }>) =>
     JSON.stringify(
       [...fields]
-        .map((f) => ({ name: f.name, type: f.type, required: !!f.required, order: f.order ?? 0 }))
+        .map((f) => ({
+          name: f.name,
+          type: f.type,
+          required: !!f.required,
+          order: f.order ?? 0,
+          refEndpointId: f.refEndpointId || undefined,
+        }))
         .sort((x, y) => x.order - y.order || x.name.localeCompare(y.name))
     );
-  return norm(a || []) === norm(b);
+  return norm(a || []) === norm(resolveSchemaFields(b, endpointList));
 }
 
 function normalizeGroupIds(groupIds: unknown[]): string[] {
@@ -283,6 +335,17 @@ async function ensureDefaultAdminMembership(
   console.log(`  Ensured admin groups for: ${ADMIN_LOGIN}`);
 }
 
+function handlersNeedUpdate(
+  current: Array<{ name?: string; type?: string; code?: string; enabled?: boolean }> | undefined,
+  expected: EndpointHandler[] | undefined
+): boolean {
+  if (!expected?.length) return false;
+  const exp = expected[0]!;
+  const cur = current?.find((h) => h.type === 'javascript');
+  if (!cur) return true;
+  return cur.code !== exp.code || cur.enabled !== exp.enabled || cur.name !== exp.name;
+}
+
 async function ensureEndpoints(
   token: string,
   endpointGroupIds: Record<string, string>,
@@ -298,6 +361,7 @@ async function ensureEndpoints(
       allowedGroupIds?: string[];
       accessType?: string;
       fields?: Array<{ name: string; type: string; required?: boolean; order?: number }>;
+      handlers?: Array<{ name?: string; type?: string; code?: string; enabled?: boolean }>;
     }>;
   }>(token, 'GET', '/api/endpoints?limit=200');
   const list = existingRes.data || [];
@@ -312,6 +376,7 @@ async function ensureEndpoints(
   let reorganized = 0;
   let accessFixed = 0;
   let schemaFixed = 0;
+  let handlersFixed = 0;
 
   for (const ep of CRM_ENDPOINTS) {
     const groupId = endpointGroupIds[ep.groupKey];
@@ -324,18 +389,22 @@ async function ensureEndpoints(
       ep.accessType === 'group' ? allowedGroupsForEndpoint(ep, allGroups) : defaultAllowed;
 
     if (!found) {
-      await api(token, 'POST', '/api/endpoints', {
+      const createdRes = await api<{ _id: string; slug?: string }>(token, 'POST', '/api/endpoints', {
         name: ep.name,
         description: ep.description,
         slug: ep.slug,
         path: ep.path,
         method: ep.method,
         groupId,
-        schema: ep.schema,
+        schema: resolveSchemaFields(ep.schema, list),
         accessType: ep.accessType,
         allowedGroupIds: ep.accessType === 'group' ? allowedGroupIds : defaultAllowed,
         enabled: true,
+        ...(ep.handlers ? { handlers: ep.handlers } : {}),
       });
+      if (createdRes?._id) {
+        list.push({ _id: createdRes._id, slug: ep.slug, path: ep.path, method: ep.method });
+      }
       console.log(`  Created endpoint: ${ep.method} ${ep.path} → ${ep.groupKey}`);
       created++;
       continue;
@@ -346,8 +415,11 @@ async function ensureEndpoints(
     if (ep.accessType === 'group' && !sameIdSets(found.allowedGroupIds, allowedGroupIds)) {
       patch.allowedGroupIds = allowedGroupIds;
     }
-    if (ep.schema.length > 0 && !schemaEquals(found.fields, ep.schema)) {
-      patch.schema = ep.schema;
+    if (ep.schema.length > 0 && !schemaEquals(found.fields, ep.schema, list)) {
+      patch.schema = resolveSchemaFields(ep.schema, list);
+    }
+    if (ep.handlers && handlersNeedUpdate(found.handlers, ep.handlers)) {
+      patch.handlers = ep.handlers;
     }
 
     if (Object.keys(patch).length > 0) {
@@ -362,6 +434,10 @@ async function ensureEndpoints(
       if (patch.schema) {
         console.log(`  Updated schema: ${ep.method} ${ep.path}`);
         schemaFixed++;
+      }
+      if (patch.handlers) {
+        console.log(`  Updated handler: ${ep.method} ${ep.path}`);
+        handlersFixed++;
       }
     }
   }
@@ -380,6 +456,7 @@ async function ensureEndpoints(
     else if (item.path.includes('/cards')) groupKey = 'cards';
     else if (item.path.includes('usage-stats') || item.path.includes('finance-stats')) groupKey = 'statistics';
     else if (item.path.includes('/currencies')) groupKey = 'currencies';
+    else if (item.path.includes('discount-types')) groupKey = 'discount-types';
     else if (item.path.includes('/settings')) groupKey = 'settings';
     else if (item.path.includes('/notifications')) groupKey = 'notifications';
     else if (item.path.includes('/backups') || item.path.includes('archive-logs')) groupKey = 'backup';
@@ -393,7 +470,7 @@ async function ensureEndpoints(
     }
   }
 
-  if (created === 0 && reorganized === 0 && accessFixed === 0 && schemaFixed === 0) {
+  if (created === 0 && reorganized === 0 && accessFixed === 0 && schemaFixed === 0 && handlersFixed === 0) {
     console.log(`  All ${CRM_ENDPOINTS.length} CRM endpoints configured`);
   } else if (schemaFixed > 0) {
     console.log(`  Updated schema on ${schemaFixed} endpoint(s)`);
@@ -476,6 +553,42 @@ async function ensureDefaultCurrencies(token: string): Promise<void> {
   }
 }
 
+async function ensureDefaultDiscountTypes(token: string): Promise<void> {
+  let existing: Array<{ id: string; number: number }> = [];
+  try {
+    const res = await fetch(`${API_URL}/api/crm/discount-types`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 404) return;
+    const json = (await res.json()) as ApiResponse<Array<{ id: string; number: number }>>;
+    if (json.success && json.data) {
+      existing = json.data;
+    }
+  } catch {
+    console.log('  CRM discount-types endpoint not ready yet, skipping discount types');
+    return;
+  }
+
+  for (const item of DEFAULT_DISCOUNT_TYPES) {
+    const found = existing.find((e) => e.number === item.number);
+    if (!found) {
+      const res = await fetch(`${API_URL}/api/crm/discount-types`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(item),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as ApiResponse;
+        throw new Error(`Failed to create discount type ${item.number}: ${err.error}`);
+      }
+      console.log(`  Created default discount type: ${item.number} (${item.name})`);
+    }
+  }
+}
+
 async function verifyServiceLogin(): Promise<void> {
   try {
     await login(SERVICE_LOGIN, SERVICE_PASSWORD, 3);
@@ -501,6 +614,7 @@ async function main(): Promise<void> {
   await removeLegacyEndpointGroup(token);
   await ensureDefaultSettings(token);
   await ensureDefaultCurrencies(token);
+  await ensureDefaultDiscountTypes(token);
   await verifyServiceLogin();
 
   console.log('WASH PRO CRM Init Seed — complete (exit 0 is normal for this one-shot container)');

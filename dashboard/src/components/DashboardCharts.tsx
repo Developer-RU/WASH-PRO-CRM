@@ -15,9 +15,16 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { categoryLabel } from './UI';
 import { formatMoney, type CurrencyConfig } from '../utils/format';
+import { latestUsageByPostAndCategory } from '../utils/statsAggregation';
 import type { FinanceStat, Post, UsageStat } from '../types';
 
 const CATEGORY_COLORS = ['#14b8a6', '#3b82f6', '#8b5cf6'];
+
+function formatUsageSeconds(seconds: number): string {
+  if (seconds >= 3600) return `${(seconds / 3600).toFixed(1)} ч`;
+  if (seconds >= 60) return `${Math.round(seconds / 60)} мин`;
+  return `${seconds} сек`;
+}
 
 interface DashboardChartsProps {
   posts: Post[];
@@ -26,6 +33,7 @@ interface DashboardChartsProps {
   currency: CurrencyConfig;
   online: number;
   offline: number;
+  maintenanceCount: number;
   errorCount: number;
 }
 
@@ -34,9 +42,9 @@ function ChartCard({ title, children, empty }: { title: string; children: React.
     <div className="card">
       <h2 className="mb-4 font-semibold">{title}</h2>
       {empty ? (
-        <p className="flex h-56 items-center justify-center text-sm text-slate-500">Нет данных для графика</p>
+        <p className="flex h-80 items-center justify-center text-sm text-slate-500">Нет данных для графика</p>
       ) : (
-        <div className="h-56">{children}</div>
+        <div className="h-80">{children}</div>
       )}
     </div>
   );
@@ -49,6 +57,7 @@ export function DashboardCharts({
   currency,
   online,
   offline,
+  maintenanceCount,
   errorCount,
 }: DashboardChartsProps) {
   const { theme } = useTheme();
@@ -66,13 +75,15 @@ export function DashboardCharts({
   const postStatusCards = [
     { label: 'Постов онлайн', value: online, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
     { label: 'Постов офлайн', value: offline, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-800/50' },
+    { label: 'Постов в обслуживании', value: maintenanceCount, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/40' },
     { label: 'Постов в ошибке', value: errorCount, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-950/40' },
   ];
 
   const usageByCategory = useMemo(() => {
+    const latest = latestUsageByPostAndCategory(usageStats);
     const cats = ['regular', 'service', 'unlimited'] as const;
     return cats.map((category, i) => {
-      const usageTime = usageStats
+      const usageTime = latest
         .filter((s) => s.category === category)
         .reduce((sum, s) => sum + (s.usageTime || 0), 0);
       return {
@@ -84,19 +95,60 @@ export function DashboardCharts({
   }, [usageStats]);
 
   const revenueTimeline = useMemo(() => {
-    const byDate: Record<string, number> = {};
+    const byDate: Record<string, { revenue: number; ts: number }> = {};
     financeStats.forEach((s) => {
+      const ts = s.recordedAt ? new Date(s.recordedAt).getTime() : 0;
       const key = s.recordedAt
         ? new Date(s.recordedAt).toLocaleDateString('ru', { day: '2-digit', month: 'short' })
         : 'Текущий';
-      byDate[key] = (byDate[key] || 0) + (s.totalRevenue || 0);
+      if (!byDate[key]) byDate[key] = { revenue: 0, ts };
+      byDate[key].revenue += s.totalRevenue || 0;
+      byDate[key].ts = Math.max(byDate[key].ts, ts);
     });
-    return Object.entries(byDate).map(([name, revenue]) => ({ name, revenue: Math.round(revenue) }));
+    return Object.entries(byDate)
+      .map(([name, { revenue, ts }]) => ({ name, revenue: Math.round(revenue), ts }))
+      .sort((a, b) => a.ts - b.ts)
+      .map(({ name, revenue }) => ({ name, revenue }));
   }, [financeStats]);
+
+  const usageTotal = useMemo(
+    () => usageByCategory.reduce((sum, item) => sum + item.value, 0),
+    [usageByCategory]
+  );
+
+  const pieLabelColor = isDark ? '#cbd5e1' : '#475569';
+
+  const renderUsagePieLabel = (props: {
+    name?: string;
+    percent?: number;
+    cx?: number;
+    cy?: number;
+    midAngle?: number;
+    outerRadius?: number;
+  }) => {
+    const { name = '', percent = 0, cx = 0, cy = 0, midAngle = 0, outerRadius = 0 } = props;
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 18;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill={pieLabelColor}
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        fontSize={11}
+      >
+        {`${name} ${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 
   return (
     <div className="mb-6 space-y-6">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {postStatusCards.map((c) => (
           <div key={c.label} className={`card ${c.bg}`}>
             <div className="text-sm text-slate-500">{c.label}</div>
@@ -109,31 +161,43 @@ export function DashboardCharts({
       <div className="grid gap-6 lg:grid-cols-2">
         <ChartCard title="Использование по категориям клиентов" empty={usageByCategory.length === 0}>
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
+            <PieChart margin={{ top: 12, right: 28, bottom: 36, left: 28 }}>
               <Pie
                 data={usageByCategory}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={85}
+                cy="46%"
+                innerRadius={48}
+                outerRadius={68}
                 paddingAngle={3}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={renderUsagePieLabel}
+                labelLine={{ stroke: pieLabelColor, strokeWidth: 1 }}
               >
                 {usageByCategory.map((entry) => (
                   <Cell key={entry.name} fill={entry.fill} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v} сек`, 'Время']} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(value: number, _name, item) => {
+                  const percent = usageTotal ? ((value / usageTotal) * 100).toFixed(0) : '0';
+                  const label = (item as { payload?: { name?: string } })?.payload?.name || 'Категория';
+                  return [`${formatUsageSeconds(value)} · ${percent}%`, label];
+                }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                layout="horizontal"
+                wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </ChartCard>
 
         <ChartCard title="Выручка" empty={revenueTimeline.length === 0}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={revenueTimeline} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <LineChart data={revenueTimeline} margin={{ top: 8, right: 12, left: 4, bottom: 24 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
               <XAxis dataKey="name" tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} width={56} />

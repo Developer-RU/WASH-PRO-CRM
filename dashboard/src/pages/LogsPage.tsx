@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { getSystemLogs } from '../api/client';
 import { PageHeader, Loading } from '../components/UI';
-import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DEFAULT_LIVE_INTERVAL_MS } from '../constants/live';
 import { usePolling } from '../hooks/usePolling';
-import { deriveLogLevel } from '../utils/format';
+import { deriveLogLevel, formatDateTime } from '../utils/format';
+import { createExportBulkAction } from '../utils/export';
 import type { LogEntry } from '../types';
 
 export function LogsPage() {
@@ -16,7 +18,7 @@ export function LogsPage() {
     return getSystemLogs(params.toString());
   }, [apiPage]);
 
-  const { data: logs, loading } = usePolling(fetchLogs, [apiPage], { intervalMs: 10000 });
+  const { data: logs, loading } = usePolling(fetchLogs, [apiPage], { intervalMs: DEFAULT_LIVE_INTERVAL_MS });
 
   const dateFiltered = useMemo(() => {
     let list = logs || [];
@@ -100,13 +102,24 @@ export function LogsPage() {
       },
       {
         key: 'createdAt',
-        header: 'Дата',
+        header: 'Дата и время',
         sortValue: (l) => l.createdAt,
-        render: (l) => new Date(l.createdAt).toLocaleString('ru'),
+        render: (l) => formatDateTime(l.createdAt),
       },
     ],
     []
   );
+
+  const bulkActions = useMemo((): DataTableBulkAction<LogEntry>[] => [
+    createExportBulkAction('system-logs.csv', [
+      { header: 'Уровень', value: (l) => deriveLogLevel(l) },
+      { header: 'Категория', value: (l) => l.action },
+      { header: 'Сообщение', value: (l) => l.message },
+      { header: 'Код', value: (l) => String(l.statusCode ?? '') },
+      { header: 'IP', value: (l) => l.ip || '' },
+      { header: 'Дата и время', value: (l) => l.createdAt },
+    ]),
+  ], []);
 
   if (loading && !logs) return <Loading />;
 
@@ -142,6 +155,7 @@ export function LogsPage() {
             </div>
           </div>
         }
+        bulkActions={bulkActions}
       />
     </div>
   );

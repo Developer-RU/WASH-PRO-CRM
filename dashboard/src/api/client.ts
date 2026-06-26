@@ -55,28 +55,10 @@ interface ApiResult<T> {
   pagination?: { total: number; page: number; limit: number; totalPages: number };
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-  const refresh = localStorage.getItem(REFRESH_KEY);
-  if (!refresh) return null;
-  const res = await fetch('/api/auth/refresh', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken: refresh }),
-  });
-  const json = (await res.json()) as ApiResult<{ accessToken: string; refreshToken: string }>;
-  if (json.success && json.data) {
-    setTokens(json.data.accessToken, json.data.refreshToken);
-    setStoredPermissions(decodeJwtPermissions(json.data.accessToken));
-    return json.data.accessToken;
-  }
-  clearAuth();
-  return null;
-}
-
-export async function api<T>(
+async function fetchApi<T>(
   path: string,
   options: RequestInit = {}
-): Promise<T> {
+): Promise<ApiResult<T>> {
   let token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -98,13 +80,58 @@ export async function api<T>(
   if (!json.success) {
     throw new Error(json.error || `Ошибка запроса: ${res.status}`);
   }
+  return json;
+}
+
+export async function api<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const json = await fetchApi<T>(path, options);
   return json.data as T;
 }
 
+/** Загружает все страницы списка (Dynamic API по умолчанию limit=20). */
+export async function apiListAll<T>(path: string, pageSize = 100): Promise<T[]> {
+  const [basePath, queryString] = path.split('?');
+  const params = new URLSearchParams(queryString || '');
+  const all: T[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    params.set('page', String(page));
+    params.set('limit', String(pageSize));
+    const json = await fetchApi<T[]>(`${basePath}?${params.toString()}`);
+    const chunk = Array.isArray(json.data) ? json.data : [];
+    all.push(...chunk);
+    totalPages = json.pagination?.totalPages ?? 1;
+    page += 1;
+  }
+
+  return all;
+}
+
 export async function apiList<T>(path: string): Promise<T[]> {
-  const data = await api<T[] | { data: T[] }>(path);
-  if (Array.isArray(data)) return data;
-  return (data as { data: T[] }).data || [];
+  return apiListAll<T>(path);
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refresh = localStorage.getItem(REFRESH_KEY);
+  if (!refresh) return null;
+  const res = await fetch('/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: refresh }),
+  });
+  const json = (await res.json()) as ApiResult<{ accessToken: string; refreshToken: string }>;
+  if (json.success && json.data) {
+    setTokens(json.data.accessToken, json.data.refreshToken);
+    setStoredPermissions(decodeJwtPermissions(json.data.accessToken));
+    return json.data.accessToken;
+  }
+  clearAuth();
+  return null;
 }
 
 export async function login(login: string, password: string) {

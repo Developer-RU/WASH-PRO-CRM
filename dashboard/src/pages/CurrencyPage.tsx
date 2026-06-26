@@ -2,10 +2,14 @@ import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { api, apiList } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { LIVE_INTERVAL_SLOW_MS } from '../constants/live';
 import { usePolling } from '../hooks/usePolling';
 import { PageHeader, Loading, Modal, Badge } from '../components/UI';
-import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
 import type { Currency } from '../types';
+import { bulkDelete } from '../utils/bulk';
+import { createExportBulkAction } from '../utils/export';
+import { formatDateTime } from '../utils/format';
 
 const emptyForm = { code: '', name: '', symbol: '', isDefault: false };
 
@@ -17,7 +21,7 @@ export function CurrencyPage() {
   const [editId, setEditId] = useState<string | null>(null);
 
   const fetchCurrencies = useCallback(() => apiList<Currency>('/crm/currencies'), []);
-  const { data: currencies, loading, refresh } = usePolling(fetchCurrencies, [], { intervalMs: 15000 });
+  const { data: currencies, loading, refresh } = usePolling(fetchCurrencies, [], { intervalMs: LIVE_INTERVAL_SLOW_MS });
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -126,6 +130,13 @@ export function CurrencyPage() {
             '—'
           ),
       },
+      {
+        key: 'createdAt',
+        header: 'Дата создания',
+        sortable: true,
+        sortValue: (c) => c.createdAt || '',
+        render: (c) => formatDateTime(c.createdAt),
+      },
       ...(canEdit
         ? [
             {
@@ -150,6 +161,32 @@ export function CurrencyPage() {
     [canEdit, currencies]
   );
 
+  const bulkActions = useMemo((): DataTableBulkAction<Currency>[] => {
+    const actions: DataTableBulkAction<Currency>[] = [
+      createExportBulkAction('currencies.csv', [
+        { header: 'Код', value: (c) => c.code },
+        { header: 'Название', value: (c) => c.name },
+        { header: 'Символ', value: (c) => c.symbol },
+        { header: 'По умолчанию', value: (c) => (c.isDefault ? 'да' : 'нет') },
+        { header: 'Дата создания', value: (c) => c.createdAt || '' },
+      ]),
+    ];
+    if (canEdit) {
+      actions.push({
+        id: 'delete',
+        label: 'Удалить',
+        variant: 'danger',
+        confirmMessage: (_rows, ids) => `Удалить ${ids.length} валют?`,
+        disabled: (rows) => rows.some((c) => c.isDefault),
+        onAction: async (_rows, ids) => {
+          await bulkDelete('/crm/currencies', ids);
+          refresh();
+        },
+      });
+    }
+    return actions;
+  }, [canEdit, refresh]);
+
   if (loading && !currencies) return <Loading />;
 
   return (
@@ -159,7 +196,7 @@ export function CurrencyPage() {
         subtitle="Справочник валют — название и символ хранятся в /api/crm/currencies"
         actions={canEdit && <button type="button" className="btn-primary" onClick={openCreate}><Plus size={16} /> Добавить</button>}
       />
-      <DataTable columns={columns} data={currencies || []} rowKey={(c) => c.id} filters={filters} searchPlaceholder="Поиск валют…" />
+      <DataTable columns={columns} data={currencies || []} rowKey={(c) => c.id} filters={filters} searchPlaceholder="Поиск валют…" bulkActions={bulkActions} isRowSelectable={(c) => !c.isDefault} />
 
       <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Редактировать валюту' : 'Новая валюта'}>
         <form onSubmit={handleSubmit} className="space-y-3">

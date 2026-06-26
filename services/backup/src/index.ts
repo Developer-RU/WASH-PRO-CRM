@@ -85,21 +85,30 @@ async function cleanupOldBackups(): Promise<void> {
   }
 }
 
-export async function runBackup(type: 'manual' | 'auto' = 'auto'): Promise<void> {
+export async function runBackup(type: 'manual' | 'auto' = 'auto', existingRecordId?: string): Promise<void> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `wash-pro-crm-${timestamp}.archive.gz`;
   const filepath = join(BACKUP_DIR, filename);
   let token = '';
-  let recordId: string | null = null;
+  let recordId: string | null = existingRecordId ?? null;
 
   try {
     token = await getToken();
-    recordId = await registerBackup(token, {
-      filename,
-      type,
-      status: 'in_progress',
-      createdAt: new Date().toISOString(),
-    });
+    if (recordId) {
+      await updateBackup(token, recordId, {
+        filename,
+        type: 'manual',
+        status: 'in_progress',
+        createdAt: new Date().toISOString(),
+      });
+    } else {
+      recordId = await registerBackup(token, {
+        filename,
+        type,
+        status: 'in_progress',
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     const cmd = `mongodump --uri="${MONGODB_URI}" --archive="${filepath}" --gzip`;
     await execAsync(cmd);
@@ -207,7 +216,7 @@ async function checkManualBackups(): Promise<void> {
     const json = (await res.json()) as { success: boolean; data?: Array<{ id: string; type: string; status: string }> };
     const pending = (json.data || []).find((b) => b.type === 'manual' && b.status === 'in_progress');
     if (pending) {
-      await runBackup('manual');
+      await runBackup('manual', pending.id);
     }
   } catch {
     // ignore
@@ -222,7 +231,8 @@ async function main(): Promise<void> {
   }
 
   cron.schedule('0 3 * * *', () => runArchive());
-  setInterval(() => checkManualBackups(), 60000);
+  void checkManualBackups();
+  setInterval(() => checkManualBackups(), 15000);
 }
 
 main().catch((err) => {

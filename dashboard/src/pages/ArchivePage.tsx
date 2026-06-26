@@ -1,9 +1,14 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, apiList } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { PageHeader, Loading } from '../components/UI';
-import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { LIVE_INTERVAL_SLOW_MS } from '../constants/live';
+import { usePolling } from '../hooks/usePolling';
 import type { ArchiveLog, CrmSetting, ArchiveGroupSettings, ArchiveSettings } from '../types';
+import { createExportBulkAction } from '../utils/export';
+import { formatDateTime } from '../utils/format';
+import { executeArchiveGroup, type ArchiveGroupKey } from '../utils/archive';
 
 const RETENTION_OPTIONS = [30, 90, 180, 365];
 
@@ -36,31 +41,48 @@ function normalizeArchiveSettings(raw: Record<string, unknown>): ArchiveSettings
   return base;
 }
 
+interface ArchivePageData {
+  logs: ArchiveLog[];
+  setting: ArchiveSettings;
+  settingId: string | null;
+}
+
 export function ArchivePage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('update', 'delete');
-  const [logs, setLogs] = useState<ArchiveLog[]>([]);
+  const canRun = hasPermission('update');
   const [setting, setSetting] = useState<ArchiveSettings>(normalizeArchiveSettings({}));
   const [settingId, setSettingId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [runningGroup, setRunningGroup] = useState<string | null>(null);
+  const settingsInitialized = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [l, settings] = await Promise.all([
+  const fetchData = useCallback(async (): Promise<ArchivePageData> => {
+    const [logs, settings] = await Promise.all([
       apiList<ArchiveLog>('/crm/archive-logs'),
       apiList<CrmSetting>('/crm/settings'),
     ]);
-    setLogs(l);
     const archive = settings.find((s) => s.key === 'archive');
-    if (archive) {
-      setSettingId(archive.id);
-      setSetting(normalizeArchiveSettings(archive.value as Record<string, unknown>));
-    }
-    setLoading(false);
+    return {
+      logs,
+      setting: archive
+        ? normalizeArchiveSettings(archive.value as Record<string, unknown>)
+        : normalizeArchiveSettings({}),
+      settingId: archive?.id ?? null,
+    };
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: LIVE_INTERVAL_SLOW_MS });
+
+  useEffect(() => {
+    if (!data || settingsInitialized.current) return;
+    setSetting(data.setting);
+    setSettingId(data.settingId);
+    settingsInitialized.current = true;
+  }, [data]);
+
+  const logs = data?.logs ?? [];
 
   const savePolicy = async (e: FormEvent) => {
     e.preventDefault();
@@ -70,21 +92,45 @@ export function ArchivePage() {
       body: JSON.stringify({ key: 'archive', value: setting }),
     });
     setMessage('Настройки архивирования сохранены');
+    settingsInitialized.current = false;
+    refresh();
   };
 
-  const runArchive = async (groupKey: string) => {
-    await api('/crm/archive-logs', {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'archive',
-        recordsAffected: 0,
-        policyDays: setting[groupKey as keyof ArchiveSettings] as number || setting.retentionDays,
-        createdAt: new Date().toISOString(),
-        details: { manual: true, group: groupKey },
-      }),
-    });
-    setMessage(`Запрос на архивирование (${groupKey}) отправлен`);
-    load();
+  const runArchive = async (groupKey: ArchiveGroupKey) => {
+    const group = setting[groupKey] as ArchiveGroupSettings;
+    if (!group.enabled) {
+      setError('Архивирование для этой группы отключено');
+      setMessage('');
+      return;
+    }
+    setRunningGroup(groupKey);
+    setError('');
+    setMessage('');
+    try {
+      const affected = await executeArchiveGroup(groupKey, group);
+      await api('/crm/archive-logs', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'archive',
+          recordsAffected: affected,
+          policyDays: group.retentionDays,
+          createdAt: new Date().toISOString(),
+          details: { manual: true, group: groupKey, deleteAfter: group.deleteAfter },
+        }),
+      });
+      const label = ARCHIVE_GROUPS.find((g) => g.key === groupKey)?.label ?? groupKey;
+      setMessage(
+        affected > 0
+          ? `${label}: обработано ${affected} записей${group.deleteAfter ? ', исходные данные удалены' : ''}`
+          : `${label}: нет записей старше ${group.retentionDays} дней`
+      );
+      refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка архивирования');
+      setMessage('');
+    } finally {
+      setRunningGroup(null);
+    }
   };
 
   const updateGroup = (key: keyof ArchiveSettings, patch: Partial<ArchiveGroupSettings>) => {
@@ -135,19 +181,30 @@ export function ArchivePage() {
     },
     {
       key: 'date',
-      header: 'Дата',
+      header: 'Дата и время',
       sortable: true,
       sortValue: (l) => l.createdAt || '',
-      render: (l) => (l.createdAt ? new Date(l.createdAt).toLocaleString('ru') : '—'),
+      render: (l) => formatDateTime(l.createdAt),
     },
   ];
 
-  if (loading) return <Loading />;
+  const logBulkActions: DataTableBulkAction<ArchiveLog>[] = [
+    createExportBulkAction('archive-logs.csv', [
+      { header: 'Действие', value: (l) => l.action },
+      { header: 'Группа', value: (l) => (l.details?.group as string) || '' },
+      { header: 'Записей', value: (l) => String(l.recordsAffected ?? '') },
+      { header: 'Срок хранения', value: (l) => String(l.policyDays ?? '') },
+      { header: 'Дата и время', value: (l) => l.createdAt || '' },
+    ]),
+  ];
+
+  if (loading && !data) return <Loading />;
 
   return (
     <div>
       <PageHeader title="Архивирование" subtitle="Аналитика → Архивирование" />
       {message && <p className="mb-4 text-sm text-emerald-600">{message}</p>}
+      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         {ARCHIVE_GROUPS.map(({ key, label }) => {
@@ -220,9 +277,16 @@ export function ArchivePage() {
               {canEdit && (
                 <div className="flex gap-2 pt-1">
                   <button type="submit" className="btn-primary">Сохранить</button>
-                  <button type="button" className="btn-secondary" onClick={() => runArchive(key)}>
-                    Запустить
-                  </button>
+                  {canRun && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      disabled={runningGroup === key}
+                      onClick={() => runArchive(key)}
+                    >
+                      {runningGroup === key ? 'Запуск…' : 'Запустить'}
+                    </button>
+                  )}
                 </div>
               )}
             </form>
@@ -231,7 +295,7 @@ export function ArchivePage() {
       </div>
 
       <h2 className="mb-3 font-semibold">Журнал архивирования</h2>
-      <DataTable columns={logColumns} data={logs} rowKey={(l) => l.id} filters={logFilters} searchPlaceholder="Поиск в журнале…" />
+      <DataTable columns={logColumns} data={logs} rowKey={(l) => l.id} filters={logFilters} searchPlaceholder="Поиск в журнале…" bulkActions={logBulkActions} />
     </div>
   );
 }

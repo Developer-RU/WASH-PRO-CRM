@@ -38,6 +38,12 @@ export function formatPause(sec?: number | null): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+export function formatDateTime(value?: string | null): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('ru');
+}
+
 export interface CurrencyConfig {
   code: string;
   name?: string;
@@ -46,19 +52,8 @@ export interface CurrencyConfig {
 
 export function formatMoney(amount: number | undefined | null, currency: CurrencyConfig = { code: 'RUB', symbol: '₽' }): string {
   const value = amount ?? 0;
-  if (currency.code && currency.code !== 'CUSTOM') {
-    try {
-      return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: currency.code,
-        maximumFractionDigits: 2,
-      }).format(value);
-    } catch {
-      /* fallback */
-    }
-  }
-  const sym = currency.symbol ?? currency.code;
-  return `${value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${sym}`;
+  const symbol = currency.symbol || currency.code;
+  return `${value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${symbol}`;
 }
 
 export function deriveLogLevel(entry: { action: string; statusCode?: number }): string {
