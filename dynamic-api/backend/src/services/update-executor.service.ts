@@ -149,6 +149,8 @@ export class UpdateExecutorService {
         dockerArgs.push('--network', env.updateDockerNetwork);
       }
 
+      dockerArgs.push('-e', `UPDATE_HOST_PROJECT_ROOT=${hostProject}`);
+
       dockerArgs.push(UPDATER_IMAGE, 'sh', '-c', inner);
 
       try {

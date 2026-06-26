@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import {
   CRM_ENDPOINTS,
   CRM_GROUPS,
+  DEFAULT_CURRENCIES,
   DEFAULT_SETTINGS,
   ENDPOINT_GROUPS,
   LEGACY_ENDPOINT_GROUP,
@@ -378,6 +379,7 @@ async function ensureEndpoints(
     else if (item.path.includes('post-states')) groupKey = 'scada';
     else if (item.path.includes('/cards')) groupKey = 'cards';
     else if (item.path.includes('usage-stats') || item.path.includes('finance-stats')) groupKey = 'statistics';
+    else if (item.path.includes('/currencies')) groupKey = 'currencies';
     else if (item.path.includes('/settings')) groupKey = 'settings';
     else if (item.path.includes('/notifications')) groupKey = 'notifications';
     else if (item.path.includes('/backups') || item.path.includes('archive-logs')) groupKey = 'backup';
@@ -438,6 +440,42 @@ async function ensureDefaultSettings(token: string): Promise<void> {
   }
 }
 
+async function ensureDefaultCurrencies(token: string): Promise<void> {
+  let existing: Array<{ id: string; code: string }> = [];
+  try {
+    const res = await fetch(`${API_URL}/api/crm/currencies`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 404) return;
+    const json = (await res.json()) as ApiResponse<Array<{ id: string; code: string }>>;
+    if (json.success && json.data) {
+      existing = json.data;
+    }
+  } catch {
+    console.log('  CRM currencies endpoint not ready yet, skipping currencies');
+    return;
+  }
+
+  for (const currency of DEFAULT_CURRENCIES) {
+    const found = existing.find((e) => e.code === currency.code);
+    if (!found) {
+      const res = await fetch(`${API_URL}/api/crm/currencies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(currency),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as ApiResponse;
+        throw new Error(`Failed to create currency ${currency.code}: ${err.error}`);
+      }
+      console.log(`  Created default currency: ${currency.code} (${currency.name})`);
+    }
+  }
+}
+
 async function verifyServiceLogin(): Promise<void> {
   try {
     await login(SERVICE_LOGIN, SERVICE_PASSWORD, 3);
@@ -462,6 +500,7 @@ async function main(): Promise<void> {
   await ensureEndpoints(token, endpointGroupIds, allGroups);
   await removeLegacyEndpointGroup(token);
   await ensureDefaultSettings(token);
+  await ensureDefaultCurrencies(token);
   await verifyServiceLogin();
 
   console.log('WASH PRO CRM Init Seed — complete (exit 0 is normal for this one-shot container)');

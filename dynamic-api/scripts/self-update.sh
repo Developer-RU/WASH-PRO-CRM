@@ -191,6 +191,8 @@ set_step fetch completed "Checked out $TARGET_TAG"
 
 set_step deploy running "Rebuilding services"
 if [[ "$DEPLOY_MODE" == "docker" || "$DEPLOY_MODE" == "docker-replica" ]]; then
+  # Compose bind mounts must use the host path (not /deploy inside the updater container).
+  export DAP_HOST_PROJECT_ROOT="${UPDATE_HOST_PROJECT_ROOT:-${DAP_HOST_PROJECT_ROOT:-$PWD}}"
   docker compose -f "$COMPOSE_FILE" pull --ignore-buildable 2>/dev/null || docker compose -f "$COMPOSE_FILE" pull || true
   docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
 else

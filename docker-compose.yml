@@ -46,7 +46,8 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@wash-pro-crm.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
       ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
-      APP_VERSION: ${DYNAMIC_API_VERSION:-1.5.6}
+      # Версия берётся из dynamic-api/backend/package.json (не задавайте DYNAMIC_API_VERSION без нужды)
+      APP_VERSION: ${DYNAMIC_API_VERSION:-}
       UPDATE_EXECUTOR_ENABLED: ${UPDATE_EXECUTOR_ENABLED:-false}
     depends_on:
       mongodb:

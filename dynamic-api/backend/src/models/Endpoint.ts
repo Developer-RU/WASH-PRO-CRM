@@ -18,6 +18,7 @@ export interface IEndpoint extends Document {
   isSystem: boolean;
   enabled: boolean;
   callCount: number;
+  dataRetentionDays?: number;
   createdBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -90,6 +91,7 @@ const EndpointSchema = new Schema<IEndpoint>(
     isSystem: { type: Boolean, default: false },
     enabled: { type: Boolean, default: true },
     callCount: { type: Number, default: 0 },
+    dataRetentionDays: { type: Number, min: 1 },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

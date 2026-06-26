@@ -52,6 +52,8 @@ nav:
     url: /kubernetes/
   - title: Configuration
     url: /configuration/
+  - title: UI Themes
+    url: /themes/
   - title: Software Updates
     url: /updates/
   - title: Development

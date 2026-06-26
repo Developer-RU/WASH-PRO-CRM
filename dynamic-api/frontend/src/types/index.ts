@@ -62,6 +62,7 @@ export interface Endpoint {
   isSystem: boolean;
   enabled: boolean;
   callCount: number;
+  dataRetentionDays?: number;
   createdAt: string;
 }
 
@@ -202,6 +203,7 @@ export interface UpdateSettings {
   githubRepo: string;
   includePrerelease: boolean;
   lastCheckAt: string | null;
+  lastKnownLatestVersion: string | null;
   lastNotifiedVersion: string | null;
   dismissedVersion: string | null;
   lastAppliedVersion: string | null;

@@ -56,9 +56,32 @@ export interface Card {
   cardType: 'regular' | 'unlimited' | 'service';
   balance: number;
   discount: number;
+  discountType?: string;
   status: string;
   washId?: string;
   postId?: string;
+  createdAt?: string;
+  validFrom?: string;
+  validUntil?: string;
+}
+
+export interface ArchiveGroupSettings {
+  enabled: boolean;
+  autoRun: boolean;
+  saveArchive: boolean;
+  deleteAfter: boolean;
+  retentionDays: number;
+  policy: string;
+}
+
+export interface ArchiveSettings {
+  retentionDays?: number;
+  autoArchive?: boolean;
+  autoDelete?: boolean;
+  cards?: ArchiveGroupSettings;
+  postStates?: ArchiveGroupSettings;
+  usageStats?: ArchiveGroupSettings;
+  financeStats?: ArchiveGroupSettings;
 }
 
 export interface UsageStat {
@@ -91,6 +114,14 @@ export interface CrmSetting {
   id: string;
   key: string;
   value: Record<string, unknown>;
+}
+
+export interface Currency {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  isDefault: boolean;
 }
 
 export interface Notification {
@@ -141,4 +172,5 @@ export interface LogEntry {
   statusCode?: number;
   createdAt: string;
   ip?: string;
+  source?: string;
 }

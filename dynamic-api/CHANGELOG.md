@@ -10,6 +10,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Multi-tenant workspace support
 
+## [1.5.11] - 2026-06-25
+
+### Fixed
+- **In-app Docker update** — compose bind mounts now use the real host project path (`DAP_HOST_PROJECT_ROOT`) when the updater runs inside a container; fixes `mongo-init` / backend / frontend failing to start after update on macOS and similar setups
+- **Rollback** — same host-path fix when `docker compose` is invoked from the updater container
+
+## [1.5.10] - 2026-06-25
+
+### Security
+- Validate **githubRepo** update setting (`owner/repo` only) — blocks malformed or path-like values before GitHub API calls
+- **HSTS** enabled in production (Helmet)
+- **Referrer-Policy**: `strict-origin-when-cross-origin` on API responses
+
+## [1.5.9] - 2026-06-25
+
+### Added
+- **Ocean** theme — deep navy panels with teal accents
+- **Forest** theme — charcoal green with emerald accents
+- **UI Themes** docs — [themes.md](docs/themes.md); palette button in header cycles Dark → Light → Ocean → Forest
+- Theme descriptions in **Settings → Display**
+
+## [1.5.8] - 2026-06-25
+
+### Fixed
+- **Software Updates status** — Settings now shows the real latest GitHub version (`lastKnownLatestVersion`), not stale `lastNotifiedVersion`; auto-refreshes when installed version is newer than cache
+- **Status row** — displays **Up to date** or **Update available** clearly
+
+## [1.5.7] - 2026-06-18
+
+### Added
+- **Data retention** — per-endpoint storage lifetime in days (Settings → Endpoint → General); MongoDB TTL auto-deletes records after expiry; leave empty to keep data **forever**
+- **Editable path** — change endpoint path after creation; stored records migrate to the new collection automatically
+
+### Changed
+- **docs**, **wiki**, and **README** — data retention and path editing documented
+
 ## [1.5.6] - 2026-06-18
 
 ### Changed
@@ -143,7 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Group inheritance with merged rules; enforced at runtime before JWT access-type checks
   - Admin tester can simulate client IP and `Origin` header
 - **API Schema** — read-only ER diagram of endpoints, groups, and reference links (`/api-schema`)
-- **Light theme** — slate + cyan UI aligned with WASH-PRO-CRM dashboard; toggle in header
+- **Light theme** — slate + cyan UI aligned with WASH-PHO-CRM dashboard; toggle in header
 - Documentation: [Network Access](docs/network-access.md), [Database Explorer](docs/database.md), [API Schema](docs/api-schema.md)
 - Session handling: centralized `UnauthorizedError` and auth state sync on token expiry
 - Zero-downtime API creation documented (no server restart on new routes); comparison with Strapi/Directus
@@ -233,6 +269,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Default endpoint groups
 - CRM, SHOP, DEVICES
 
+[1.5.11]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.11
+[1.5.10]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.10
+[1.5.9]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.9
+[1.5.8]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.8
+[1.5.7]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.7
 [1.5.6]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.6
 [1.5.5]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.5
 [1.5.3]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.3

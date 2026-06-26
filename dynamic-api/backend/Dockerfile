@@ -21,7 +21,6 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY scripts /app/scripts
 
-ENV APP_VERSION=1.5.3
 
 EXPOSE 3001
 

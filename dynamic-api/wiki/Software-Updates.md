@@ -11,6 +11,7 @@
 - Progress steps: snapshot → fetch → deploy → health
 - **Cancel** active jobs from Settings
 - Stale jobs (target older than installed version) auto-failed on startup
+- **Up to date** / **Update available** status with correct GitHub latest (v1.5.8+)
 - Automatic rollback if health check fails after deploy
 
 ## Out of the box

@@ -21,12 +21,27 @@ GET and POST on same path share `EndpointData` via `resourcePath`.
 
 Paths with `:id` (e.g. `/api/products/:id`) share the same collection base path as `/api/products`.
 
+## Editable path
+
+Change an endpoint's **path** after creation in the admin UI. Stored records for that endpoint migrate to the new collection. Path + method must stay unique. System endpoints are locked.
+
+## Data retention
+
+**Endpoint editor → General → Data retention (days)**
+
+- Set a number — MongoDB auto-deletes records after that many days (TTL)
+- Leave empty — data is kept **forever** (default)
+
+Applies to POST and JS handler `db.create`.
+
 ## Features
 
 - Schema validation on write
 - Path parameters (`:id`)
 - Cross-endpoint references
 - **Network access** (domains, IP/CIDR pools) on groups and endpoints
+- **Data retention** — optional per-endpoint TTL; empty = forever
+- **Editable path** after creation
 - Auto docs and examples
 - Built-in API tester (system endpoints use real management API + RBAC)
 

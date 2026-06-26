@@ -1,6 +1,7 @@
 import vm from 'vm';
 import { endpointDataRepository } from '../repositories';
 import { JwtPayload } from '../types';
+import { computeExpiresAt } from '../utils/data-retention';
 
 const HANDLER_TIMEOUT_MS = 5000;
 
@@ -19,7 +20,8 @@ export type HandlerResult = {
   body: unknown;
 };
 
-function createDbContext(endpointId: string, resourcePath: string) {
+function createDbContext(endpointId: string, resourcePath: string, dataRetentionDays?: number) {
+  const expiresAt = computeExpiresAt(dataRetentionDays);
   return {
     async findOne(filter: Record<string, unknown> = {}) {
       const page = await endpointDataRepository.findByPath(resourcePath, 1, 500);
@@ -57,7 +59,7 @@ function createDbContext(endpointId: string, resourcePath: string) {
     },
 
     async create(data: Record<string, unknown>) {
-      const record = await endpointDataRepository.create(endpointId, resourcePath, data);
+      const record = await endpointDataRepository.create(endpointId, resourcePath, data, { expiresAt });
       return { id: record._id.toString(), ...record.data };
     },
 
@@ -98,8 +100,14 @@ function normalizeHandlerOutput(output: unknown): HandlerResult {
 }
 
 export class HandlerRuntimeService {
-  async run(code: string, req: HandlerRequest, endpointId: string, resourcePath: string): Promise<HandlerResult> {
-    const db = createDbContext(endpointId, resourcePath);
+  async run(
+    code: string,
+    req: HandlerRequest,
+    endpointId: string,
+    resourcePath: string,
+    dataRetentionDays?: number
+  ): Promise<HandlerResult> {
+    const db = createDbContext(endpointId, resourcePath, dataRetentionDays);
     const sandbox: Record<string, unknown> = {
       req,
       db,

@@ -8,13 +8,19 @@ import { DashboardPage } from './pages/DashboardPage';
 import { WashesPage } from './pages/WashesPage';
 import { PostsPage } from './pages/PostsPage';
 import { StatesPage } from './pages/StatesPage';
-import { CardsPage } from './pages/CardsPage';
+import {
+  CardsLayout,
+  CardsDiscountPage,
+  CardsServicePage,
+  CardsVipPage,
+} from './pages/CardsPage';
 import { UsagePage } from './pages/UsagePage';
 import { FinancePage } from './pages/FinancePage';
 import { ArchivePage } from './pages/ArchivePage';
 import { BackupsPage } from './pages/BackupsPage';
 import { TelegramPage } from './pages/TelegramPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { CurrencyPage } from './pages/CurrencyPage';
 import { LogsPage } from './pages/LogsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -46,13 +52,19 @@ function AppRoutes() {
         <Route path="washes" element={<WashesPage />} />
         <Route path="posts" element={<PostsPage />} />
         <Route path="states" element={<StatesPage />} />
-        <Route path="cards" element={<CardsPage />} />
+        <Route path="cards" element={<CardsLayout />}>
+          <Route index element={<Navigate to="discount" replace />} />
+          <Route path="discount" element={<CardsDiscountPage />} />
+          <Route path="service" element={<CardsServicePage />} />
+          <Route path="vip" element={<CardsVipPage />} />
+        </Route>
         <Route path="usage" element={<UsagePage />} />
         <Route path="finance" element={<FinancePage />} />
         <Route path="archive" element={<ArchivePage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="backups" element={<AdminRoute><BackupsPage /></AdminRoute>} />
         <Route path="telegram" element={<AdminRoute><TelegramPage /></AdminRoute>} />
+        <Route path="currency" element={<AdminRoute><CurrencyPage /></AdminRoute>} />
         <Route path="logs" element={<AdminRoute><LogsPage /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

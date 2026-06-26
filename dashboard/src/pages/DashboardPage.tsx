@@ -1,97 +1,162 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { apiList } from '../api/client';
 import { PageHeader, StatCard, Loading, Badge } from '../components/UI';
+import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
 import { DashboardCharts } from '../components/DashboardCharts';
+import { usePolling } from '../hooks/usePolling';
+import { useCurrency } from '../hooks/useCurrency';
+import { formatMoney } from '../utils/format';
 import type { Wash, Post, PostState, Notification, UsageStat, FinanceStat } from '../types';
 
-export function DashboardPage() {
-  const [washes, setWashes] = useState<Wash[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [states, setStates] = useState<PostState[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [usageStats, setUsageStats] = useState<UsageStat[]>([]);
-  const [financeStats, setFinanceStats] = useState<FinanceStat[]>([]);
-  const [loading, setLoading] = useState(true);
+interface DashboardData {
+  washes: Wash[];
+  posts: Post[];
+  states: PostState[];
+  notifications: Notification[];
+  usageStats: UsageStat[];
+  financeStats: FinanceStat[];
+}
 
-  useEffect(() => {
-    Promise.all([
+export function DashboardPage() {
+  const { currency } = useCurrency();
+
+  const fetchData = useCallback(async (): Promise<DashboardData> => {
+    const [washes, posts, states, notifications, usageStats, financeStats] = await Promise.all([
       apiList<Wash>('/crm/washes'),
       apiList<Post>('/crm/posts'),
       apiList<PostState>('/crm/post-states'),
       apiList<Notification>('/crm/notifications'),
       apiList<UsageStat>('/crm/usage-stats'),
       apiList<FinanceStat>('/crm/finance-stats'),
-    ])
-      .then(([w, p, s, n, usage, finance]) => {
-        setWashes(w);
-        setPosts(p);
-        setStates(s);
-        setNotifications(n.filter((x) => !x.read).slice(0, 5));
-        setUsageStats(usage);
-        setFinanceStats(finance);
-      })
-      .finally(() => setLoading(false));
+    ]);
+    return { washes, posts, states, notifications, usageStats, financeStats };
   }, []);
 
-  if (loading) return <Loading />;
+  const { data, loading } = usePolling(fetchData, [], { intervalMs: 5000 });
 
-  const online = posts.filter((p) => p.status === 'online').length;
-  const offline = posts.filter((p) => p.status === 'offline').length;
-  const errors = posts.filter((p) => p.status === 'error').length;
+  const finance = useMemo(() => {
+    if (!data) return { cash: 0, cashless: 0, revenue: 0, discounts: 0 };
+    const before = data.financeStats.filter((s) => s.period === 'before_collection');
+    return {
+      cash: before.reduce((s, x) => s + (x.cash || 0), 0),
+      cashless: before.reduce((s, x) => s + (x.cashless || 0), 0),
+      revenue: before.reduce((s, x) => s + (x.totalRevenue || 0), 0),
+      discounts: before.reduce((s, x) => s + (x.discountOps || 0), 0),
+    };
+  }, [data]);
+
+  const activeErrors = useMemo(() => {
+    if (!data) return 0;
+    const postErrors = data.posts.filter((p) => p.status === 'error').length;
+    const notifErrors = data.notifications.filter((n) => !n.read && n.severity === 'error').length;
+    return postErrors + notifErrors;
+  }, [data]);
+
+  const notificationFilters: DataTableFilter<Notification>[] = useMemo(
+    () => [
+      {
+        id: 'severity',
+        label: 'Важность',
+        options: [
+          { value: 'error', label: 'Ошибка' },
+          { value: 'warning', label: 'Предупреждение' },
+          { value: 'info', label: 'Информация' },
+        ],
+        match: (n, v) => n.severity === v,
+      },
+      {
+        id: 'read',
+        label: 'Статус',
+        options: [
+          { value: 'unread', label: 'Непрочитанные' },
+          { value: 'read', label: 'Прочитанные' },
+        ],
+        match: (n, v) => (v === 'read' ? n.read : !n.read),
+      },
+    ],
+    []
+  );
+
+  const notificationColumns: DataTableColumn<Notification>[] = useMemo(
+    () => [
+      {
+        key: 'type',
+        header: 'Тип',
+        sortable: true,
+        searchValue: (n) => n.type,
+        sortValue: (n) => n.type,
+        render: (n) => (
+          <Badge variant={n.severity === 'error' ? 'error' : n.severity === 'warning' ? 'warning' : 'default'}>
+            {n.type}
+          </Badge>
+        ),
+      },
+      {
+        key: 'message',
+        header: 'Сообщение',
+        sortable: true,
+        searchValue: (n) => n.message,
+        sortValue: (n) => n.message,
+        render: (n) => <span className="text-sm">{n.message}</span>,
+      },
+      {
+        key: 'date',
+        header: 'Дата',
+        sortable: true,
+        sortValue: (n) => n.createdAt || '',
+        render: (n) => (
+          <span className="text-sm text-slate-500">
+            {n.createdAt ? new Date(n.createdAt).toLocaleString('ru') : '—'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  if (loading && !data) return <Loading />;
+  if (!data) return <Loading />;
+
+  const online = data.posts.filter((p) => p.status === 'online').length;
+  const offline = data.posts.filter((p) => p.status === 'offline').length;
+  const errors = data.posts.filter((p) => p.status === 'error').length;
+  const recentNotifications = [...data.notifications]
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 50);
 
   return (
     <div>
       <PageHeader title="Обзор" subtitle={`Версия ${import.meta.env.VITE_APP_VERSION || '1.0.0'}`} />
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Автомоек" value={washes.length} />
-        <StatCard label="Постов онлайн" value={`${online}/${posts.length}`} />
-        <StatCard label="Офлайн" value={offline} />
-        <StatCard label="Ошибки" value={errors} />
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+        <StatCard label="Наличная выручка" value={formatMoney(finance.cash, currency)} />
+        <StatCard label="Безналичная выручка" value={formatMoney(finance.cashless, currency)} />
+        <StatCard label="Общая выручка" value={formatMoney(finance.revenue, currency)} />
+        <StatCard label="Сумма скидок" value={formatMoney(finance.discounts, currency)} />
+        <StatCard label="Активные ошибки" value={activeErrors} hint="Посты + непрочитанные уведомления" />
       </div>
 
-      <DashboardCharts posts={posts} usageStats={usageStats} financeStats={financeStats} />
+      <DashboardCharts
+        posts={data.posts}
+        usageStats={data.usageStats}
+        financeStats={data.financeStats}
+        currency={currency}
+        online={online}
+        offline={offline}
+        errorCount={errors}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="card">
-          <h2 className="mb-4 font-semibold">Текущее состояние постов</h2>
-          {states.length === 0 ? (
-            <p className="text-sm text-slate-500">Нет данных о состоянии</p>
-          ) : (
-            <div className="space-y-3">
-              {states.slice(0, 8).map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded-lg border border-slate-100 p-3 dark:border-slate-800">
-                  <div>
-                    <div className="font-medium">{s.modeName || s.mode || '—'}</div>
-                    <div className="text-xs text-slate-500">Пост {s.postId.slice(-6)}</div>
-                  </div>
-                  <Badge variant={s.connected ? 'success' : 'warning'}>
-                    {s.connected ? 'Связь' : 'Нет связи'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="card">
-          <h2 className="mb-4 font-semibold">Последние уведомления</h2>
-          {notifications.length === 0 ? (
-            <p className="text-sm text-slate-500">Нет новых уведомлений</p>
-          ) : (
-            <div className="space-y-3">
-              {notifications.map((n) => (
-                <div key={n.id} className="rounded-lg border border-slate-100 p-3 dark:border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={n.severity === 'error' ? 'error' : n.severity === 'warning' ? 'warning' : 'default'}>
-                      {n.type}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-sm">{n.message}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="card">
+        <h2 className="mb-4 font-semibold">Последние уведомления</h2>
+        <DataTable
+          columns={notificationColumns}
+          data={recentNotifications}
+          rowKey={(n) => n.id}
+          filters={notificationFilters}
+          searchPlaceholder="Поиск уведомлений…"
+          pageSize={10}
+          emptyMessage="Нет уведомлений"
+        />
       </div>
     </div>
   );

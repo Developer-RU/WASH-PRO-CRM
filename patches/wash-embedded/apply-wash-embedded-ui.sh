@@ -18,7 +18,7 @@ fi
 SETTINGS="$DA/frontend/src/pages/SettingsPage.tsx"
 if ! grep -q 'washEmbedded' "$SETTINGS"; then
   perl -i -pe 's|from '\''../components/UI'\'';|from '\''../components/UI'\'';\nimport WashSoftwareUpdatesSection from '\''../components/WashSoftwareUpdatesSection'\'';\n\nconst washEmbedded = import.meta.env.VITE_WASH_EMBEDDED === '\''true'\'';|' "$SETTINGS"
-  perl -i -0pe 's|<SettingSection title="Software Updates" icon=\{ArrowUpCircle\}>|<SettingSection title="Software Updates" icon={ArrowUpCircle}>\n          {washEmbedded ? (\n            <WashSoftwareUpdatesSection updateStatus={updateStatus} />\n          ) : (\n          <|' "$SETTINGS"
+  perl -i -0pe 's|<SettingSection title="Software Updates" icon=\{ArrowUpCircle\}>|<SettingSection title="Software Updates" icon={ArrowUpCircle}>\n          {washEmbedded ? (\n            <WashSoftwareUpdatesSection updateStatus={updateStatus} />\n          ) : (\n          <>|' "$SETTINGS"
   perl -i -0pe 's|(Deploy from a git clone or release archive — updates are applied automatically with rollback on failure\.\n          </p>\n        </SettingSection>)|Deploy from a git clone or release archive — updates are applied automatically with rollback on failure.\n          </p>\n          </>\n          )}\n        </SettingSection>|' "$SETTINGS"
   echo "==> Patched SettingsPage.tsx for WASH embedded UI"
 fi

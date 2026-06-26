@@ -97,6 +97,7 @@ export interface CreateEndpointDto {
   };
   inheritGroupNetworkAccess?: boolean;
   handlers?: { name: string; type: string; code?: string; enabled?: boolean }[];
+  dataRetentionDays?: number | null;
 }
 
 export interface UpdateEndpointDto {
@@ -118,6 +119,7 @@ export interface UpdateEndpointDto {
   inheritGroupNetworkAccess?: boolean;
   handlers?: { name: string; type: string; code?: string; enabled?: boolean }[];
   enabled?: boolean;
+  dataRetentionDays?: number | null;
 }
 
 export interface TestEndpointDto {

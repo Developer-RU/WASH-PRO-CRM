@@ -4,24 +4,18 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
+  LineChart,
+  Line,
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
-import { categoryLabel, statusLabel } from './UI';
+import { categoryLabel } from './UI';
+import { formatMoney, type CurrencyConfig } from '../utils/format';
 import type { FinanceStat, Post, UsageStat } from '../types';
-
-const STATUS_COLORS: Record<string, string> = {
-  online: '#10b981',
-  offline: '#64748b',
-  error: '#ef4444',
-  maintenance: '#f59e0b',
-};
 
 const CATEGORY_COLORS = ['#14b8a6', '#3b82f6', '#8b5cf6'];
 
@@ -29,6 +23,10 @@ interface DashboardChartsProps {
   posts: Post[];
   usageStats: UsageStat[];
   financeStats: FinanceStat[];
+  currency: CurrencyConfig;
+  online: number;
+  offline: number;
+  errorCount: number;
 }
 
 function ChartCard({ title, children, empty }: { title: string; children: React.ReactNode; empty?: boolean }) {
@@ -44,7 +42,15 @@ function ChartCard({ title, children, empty }: { title: string; children: React.
   );
 }
 
-export function DashboardCharts({ posts, usageStats, financeStats }: DashboardChartsProps) {
+export function DashboardCharts({
+  posts,
+  usageStats,
+  financeStats,
+  currency,
+  online,
+  offline,
+  errorCount,
+}: DashboardChartsProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -57,107 +63,89 @@ export function DashboardCharts({ posts, usageStats, financeStats }: DashboardCh
     fontSize: '12px',
   };
 
-  const postStatusData = useMemo(() => {
-    const counts: Record<string, number> = { online: 0, offline: 0, error: 0, maintenance: 0 };
-    posts.forEach((p) => {
-      counts[p.status] = (counts[p.status] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .filter(([, value]) => value > 0)
-      .map(([status, value]) => ({
-        name: statusLabel[status] || status,
-        value,
-        color: STATUS_COLORS[status] || '#94a3b8',
-      }));
-  }, [posts]);
-
-  const revenueData = useMemo(() => {
-    const cash = financeStats.reduce((s, x) => s + (x.cash || 0), 0);
-    const cashless = financeStats.reduce((s, x) => s + (x.cashless || 0), 0);
-    const revenue = financeStats.reduce((s, x) => s + (x.totalRevenue || 0), 0);
-    return [
-      { name: 'Наличные', value: Math.round(cash), fill: '#14b8a6' },
-      { name: 'Безнал', value: Math.round(cashless), fill: '#3b82f6' },
-      { name: 'Выручка', value: Math.round(revenue), fill: '#8b5cf6' },
-    ].filter((x) => x.value > 0);
-  }, [financeStats]);
+  const postStatusCards = [
+    { label: 'Постов онлайн', value: online, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+    { label: 'Постов офлайн', value: offline, color: 'text-slate-600', bg: 'bg-slate-50 dark:bg-slate-800/50' },
+    { label: 'Постов в ошибке', value: errorCount, color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-950/40' },
+  ];
 
   const usageByCategory = useMemo(() => {
-    const byCategory: Record<string, number> = {};
-    usageStats.forEach((s) => {
-      const key = s.category || 'other';
-      byCategory[key] = (byCategory[key] || 0) + (s.launchCount || 0);
-    });
-    return Object.entries(byCategory).map(([category, launches], i) => ({
-      name: categoryLabel[category] || category,
-      launches,
-      fill: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-    }));
+    const cats = ['regular', 'service', 'unlimited'] as const;
+    return cats.map((category, i) => {
+      const usageTime = usageStats
+        .filter((s) => s.category === category)
+        .reduce((sum, s) => sum + (s.usageTime || 0), 0);
+      return {
+        name: categoryLabel[category],
+        value: usageTime,
+        fill: CATEGORY_COLORS[i],
+      };
+    }).filter((x) => x.value > 0);
   }, [usageStats]);
 
+  const revenueTimeline = useMemo(() => {
+    const byDate: Record<string, number> = {};
+    financeStats.forEach((s) => {
+      const key = s.recordedAt
+        ? new Date(s.recordedAt).toLocaleDateString('ru', { day: '2-digit', month: 'short' })
+        : 'Текущий';
+      byDate[key] = (byDate[key] || 0) + (s.totalRevenue || 0);
+    });
+    return Object.entries(byDate).map(([name, revenue]) => ({ name, revenue: Math.round(revenue) }));
+  }, [financeStats]);
+
   return (
-    <div className="mb-6 grid gap-6 lg:grid-cols-3">
-      <ChartCard title="Статус постов" empty={postStatusData.length === 0}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={postStatusData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius={50}
-              outerRadius={80}
-              paddingAngle={2}
-            >
-              {postStatusData.map((entry) => (
-                <Cell key={entry.name} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={tooltipStyle}
-              formatter={(value: number) => [value, 'Постов']}
-            />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
-          </PieChart>
-        </ResponsiveContainer>
-      </ChartCard>
+    <div className="mb-6 space-y-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        {postStatusCards.map((c) => (
+          <div key={c.label} className={`card ${c.bg}`}>
+            <div className="text-sm text-slate-500">{c.label}</div>
+            <div className={`mt-1 text-3xl font-bold ${c.color}`}>{c.value}</div>
+            <div className="mt-1 text-xs text-slate-400">из {posts.length} постов</div>
+          </div>
+        ))}
+      </div>
 
-      <ChartCard title="Выручка" empty={revenueData.length === 0}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={revenueData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-            <XAxis dataKey="name" tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
-            <Tooltip
-              contentStyle={tooltipStyle}
-              formatter={(value: number) => [`${value.toLocaleString('ru-RU')} ₽`, '']}
-            />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartCard>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ChartCard title="Использование по категориям клиентов" empty={usageByCategory.length === 0}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={usageByCategory}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={3}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {usageByCategory.map((entry) => (
+                  <Cell key={entry.name} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v} сек`, 'Время']} />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-      <ChartCard title="Запуски по категориям" empty={usageByCategory.length === 0}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={usageByCategory} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-            <XAxis
-              dataKey="name"
-              tick={{ fill: axisColor, fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-              interval={0}
-              angle={-12}
-              textAnchor="end"
-              height={48}
-            />
-            <YAxis tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value, 'Запусков']} />
-            <Bar dataKey="launches" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartCard>
+        <ChartCard title="Выручка" empty={revenueTimeline.length === 0}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={revenueTimeline} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: axisColor, fontSize: 11 }} axisLine={false} tickLine={false} width={56} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(value: number) => [formatMoney(value, currency), 'Выручка']}
+              />
+              <Line type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
     </div>
   );
 }

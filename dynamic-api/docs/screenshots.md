@@ -7,9 +7,9 @@ title: Screenshots
 description: UI screenshots from localhost deployment
 ---
 
-Screenshots of **Dynamic API Platform v1.5.6** running at `http://localhost:8080` (captured June 2026).
+Screenshots of **Dynamic API Platform v1.5.9** running at `http://localhost:8080` (captured June 2026).
 
-> The admin panel supports **light** and **dark** themes (slate + cyan) — toggle via the header sun/moon button.
+> The admin panel supports **four themes** — Dark, Light, **Ocean**, and **Forest** — switch via the palette button in the header. See [UI Themes]({{ '/themes/' | relative_url }}).
 
 ## Login
 

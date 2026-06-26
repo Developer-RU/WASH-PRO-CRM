@@ -77,7 +77,7 @@ services:
       mongo3:
         condition: service_healthy
     volumes:
-      - ./docker/mongo/replica-init.sh:/replica-init.sh:ro
+      - ${DAP_HOST_PROJECT_ROOT:-${PWD}}/docker/mongo/replica-init.sh:/replica-init.sh:ro
     entrypoint: ["bash", "/replica-init.sh"]
     networks:
       - replica-network
@@ -107,12 +107,13 @@ services:
       ADMIN_EMAIL: admin@dynamic-api.local
       ADMIN_PASSWORD: Admin123!
       ADMIN_LOGIN: admin
-      APP_VERSION: ${APP_VERSION:-1.5.6}
+      APP_VERSION: ${APP_VERSION:-1.5.11}
       UPDATE_EXECUTOR_ENABLED: ${UPDATE_EXECUTOR_ENABLED:-true}
       UPDATE_DEPLOY_MODE: docker-replica
       UPDATE_COMPOSE_FILE: /deploy/docker-compose.replica.yml
       UPDATE_PROJECT_ROOT: /deploy
-      UPDATE_HOST_PROJECT_ROOT: ${PWD}
+      UPDATE_HOST_PROJECT_ROOT: ${DAP_HOST_PROJECT_ROOT:-${PWD}}
+      DAP_HOST_PROJECT_ROOT: ${DAP_HOST_PROJECT_ROOT:-${PWD}}
       UPDATE_DATA_DIR: /app/data/updates
       UPDATE_DATA_VOLUME: dap_update_data_replica
       UPDATE_DOCKER_NETWORK: dap-replica-network
@@ -124,7 +125,7 @@ services:
       - backend_logs:/app/logs
       - update_data:/app/data/updates
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${PWD}:/deploy
+      - ${DAP_HOST_PROJECT_ROOT:-${PWD}}:/deploy
     networks:
       - replica-network
     healthcheck:

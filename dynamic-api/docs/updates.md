@@ -155,6 +155,7 @@ In-cluster auto-update is not enabled by default. Use your GitOps / CI pipeline 
 | Check fails | Outbound HTTPS blocked; verify `githubRepo` |
 | Health timeout | Fix `UPDATE_HEALTH_URL`; ensure port reachable from updater |
 | Stuck update banner | Stale job in DB — restart backend (auto-reconcile) or **Cancel** in Settings |
+| **Latest on GitHub** shows old version | Click **Check now** — v1.5.8+ stores real GitHub latest; manual deploys auto-refresh cache |
 | Rollback after update | Previous git ref restored; inspect `update_data` logs |
 
 Logs: `{UPDATE_DATA_DIR}/update-{jobId}.log`

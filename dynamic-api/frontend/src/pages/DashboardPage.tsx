@@ -12,8 +12,9 @@ import { useAuth } from '../context/AuthContext';
 import { DashboardStats } from '../types';
 import { StatCard, PageHeader, LoadingSpinner } from '../components/UI';
 import { useTheme } from '../context/ThemeContext';
+import type { Theme } from '../themes';
 
-const chartThemes = {
+const chartThemes: Record<Theme, { grid: string; tick: string; tooltip: Record<string, string | number> }> = {
   dark: {
     grid: '#334155',
     tick: '#94a3b8',
@@ -24,7 +25,17 @@ const chartThemes = {
     tick: '#64748b',
     tooltip: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, color: '#0f172a' },
   },
-} as const;
+  ocean: {
+    grid: '#1e3a5f',
+    tick: '#7da8c4',
+    tooltip: { background: '#081630', border: '1px solid #1e3a5f', borderRadius: 8, fontSize: 12, color: '#e0f2fe' },
+  },
+  forest: {
+    grid: '#1a3d2e',
+    tick: '#86b09a',
+    tooltip: { background: '#0a1f16', border: '1px solid #1a3d2e', borderRadius: 8, fontSize: 12, color: '#ecfdf5' },
+  },
+};
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (

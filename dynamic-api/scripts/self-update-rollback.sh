@@ -59,6 +59,7 @@ else
 fi
 
 if [[ "$MODE" == "docker" || "$MODE" == "docker-replica" || "$DEPLOY_MODE" == "docker" || "$DEPLOY_MODE" == "docker-replica" ]]; then
+  export DAP_HOST_PROJECT_ROOT="${UPDATE_HOST_PROJECT_ROOT:-${DAP_HOST_PROJECT_ROOT:-$PWD}}"
   docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
 else
   npm install --prefix backend --omit=dev

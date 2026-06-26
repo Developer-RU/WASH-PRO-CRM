@@ -47,12 +47,13 @@ services:
       ADMIN_EMAIL: admin@dynamic-api.local
       ADMIN_PASSWORD: Admin123!
       ADMIN_LOGIN: admin
-      APP_VERSION: ${APP_VERSION:-1.5.6}
+      APP_VERSION: ${APP_VERSION:-1.5.11}
       UPDATE_EXECUTOR_ENABLED: ${UPDATE_EXECUTOR_ENABLED:-true}
       UPDATE_DEPLOY_MODE: docker
       UPDATE_COMPOSE_FILE: /deploy/docker-compose.yml
       UPDATE_PROJECT_ROOT: /deploy
-      UPDATE_HOST_PROJECT_ROOT: ${PWD}
+      UPDATE_HOST_PROJECT_ROOT: ${DAP_HOST_PROJECT_ROOT:-${PWD}}
+      DAP_HOST_PROJECT_ROOT: ${DAP_HOST_PROJECT_ROOT:-${PWD}}
       UPDATE_DATA_DIR: /app/data/updates
       UPDATE_DATA_VOLUME: dap_update_data
       UPDATE_DOCKER_NETWORK: dap_default
@@ -64,7 +65,7 @@ services:
       - backend_logs:/app/logs
       - update_data:/app/data/updates
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${PWD}:/deploy
+      - ${DAP_HOST_PROJECT_ROOT:-${PWD}}:/deploy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
       interval: 15s

@@ -59,7 +59,13 @@ export class UpdateService {
     }
     const releases = (await res.json()) as GitHubRelease[];
     const stable = releases.filter((r) => settings.includePrerelease || !r.prerelease);
-    return stable[0] ?? null;
+    if (!stable.length) return null;
+
+    return stable.reduce((best, release) => {
+      const bestVer = this.parseVersion(best.tag_name);
+      const nextVer = this.parseVersion(release.tag_name);
+      return isNewerVersion(nextVer, bestVer) ? release : best;
+    });
   }
 
   parseVersion(tag: string): string {
@@ -89,6 +95,9 @@ export class UpdateService {
       const patch: Partial<import('./update-settings.service').UpdateSettings> = {
         lastCheckAt: checkedAt,
       };
+      if (latestVersion) {
+        patch.lastKnownLatestVersion = latestVersion;
+      }
       if (updateAvailable && latestVersion) {
         patch.lastNotifiedVersion = latestVersion;
       }
@@ -114,27 +123,33 @@ export class UpdateService {
     await this.reconcileStaleJobs();
     const settings = await updateSettingsService.load();
     const currentVersion = getAppVersion();
+    const cachedLatest = settings.lastKnownLatestVersion ?? settings.lastNotifiedVersion;
+    const cacheStale =
+      !settings.lastCheckAt ||
+      (cachedLatest ? isNewerVersion(currentVersion, cachedLatest) : false);
+
     let check: UpdateCheckResult;
 
     try {
-      if (settings.lastCheckAt) {
+      if (cacheStale) {
+        check = await this.checkForUpdates(true);
+      } else {
+        const latestVersion = settings.lastKnownLatestVersion ?? settings.lastNotifiedVersion;
         check = {
           currentVersion,
-          latestVersion: settings.lastNotifiedVersion,
-          latestTag: settings.lastNotifiedVersion ? `v${settings.lastNotifiedVersion}` : null,
-          updateAvailable: settings.lastNotifiedVersion
-            ? isNewerVersion(settings.lastNotifiedVersion, currentVersion)
+          latestVersion,
+          latestTag: latestVersion ? `v${latestVersion}` : null,
+          updateAvailable: latestVersion
+            ? isNewerVersion(latestVersion, currentVersion)
             : false,
           releaseUrl: null,
           releaseNotes: null,
           publishedAt: null,
-          checkedAt: settings.lastCheckAt,
+          checkedAt: settings.lastCheckAt!,
           executorAvailable: updateExecutorService.isAvailable(),
           executorReason: updateExecutorService.getUnavailableReason(),
           deployMode: env.updateDeployMode,
         };
-      } else {
-        check = await this.checkForUpdates(true);
       }
     } catch {
       check = {
@@ -279,6 +294,7 @@ export class UpdateService {
     if (status === 'completed') {
       await updateSettingsService.update({
         lastAppliedVersion: job.targetVersion,
+        lastKnownLatestVersion: job.targetVersion,
         dismissedVersion: job.targetVersion,
       });
     }

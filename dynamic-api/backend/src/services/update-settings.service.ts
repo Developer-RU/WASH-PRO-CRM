@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { SystemSettings } from '../models';
+import { validateGithubRepo } from '../utils/github-repo';
 
 export interface UpdateSettings {
   checkEnabled: boolean;
@@ -11,6 +12,7 @@ export interface UpdateSettings {
   githubRepo: string;
   includePrerelease: boolean;
   lastCheckAt: string | null;
+  lastKnownLatestVersion: string | null;
   lastNotifiedVersion: string | null;
   dismissedVersion: string | null;
   lastAppliedVersion: string | null;
@@ -25,6 +27,7 @@ const DEFAULTS: UpdateSettings = {
   githubRepo: 'Dynamic-API-Platform/Dynamic-API-Platform',
   includePrerelease: false,
   lastCheckAt: null,
+  lastKnownLatestVersion: null,
   lastNotifiedVersion: null,
   dismissedVersion: null,
   lastAppliedVersion: null,
@@ -39,6 +42,7 @@ const KEY_MAP: Record<keyof UpdateSettings, string> = {
   githubRepo: 'update_github_repo',
   includePrerelease: 'update_include_prerelease',
   lastCheckAt: 'update_last_check_at',
+  lastKnownLatestVersion: 'update_last_known_latest_version',
   lastNotifiedVersion: 'update_last_notified_version',
   dismissedVersion: 'update_dismissed_version',
   lastAppliedVersion: 'update_last_applied_version',
@@ -82,7 +86,12 @@ class UpdateSettingsService {
   }
 
   async update(partial: Partial<UpdateSettings>): Promise<UpdateSettings> {
-    for (const [field, value] of Object.entries(partial)) {
+    const patch = { ...partial };
+    if (patch.githubRepo !== undefined) {
+      patch.githubRepo = validateGithubRepo(String(patch.githubRepo));
+    }
+
+    for (const [field, value] of Object.entries(patch)) {
       const key = KEY_MAP[field as keyof UpdateSettings];
       if (!key || value === undefined) continue;
       await SystemSettings.findOneAndUpdate(

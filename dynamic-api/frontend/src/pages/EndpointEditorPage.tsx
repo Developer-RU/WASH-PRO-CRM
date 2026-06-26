@@ -85,6 +85,7 @@ export default function EndpointEditorPage() {
       const updated = await api.updateEndpoint(id, {
         name: endpoint.name,
         description: endpoint.description,
+        path: endpoint.path,
         groupId: endpoint.groupId?._id || null,
         schema: endpoint.fields,
         accessType: endpoint.accessType,
@@ -93,6 +94,7 @@ export default function EndpointEditorPage() {
         inheritGroupNetworkAccess: endpoint.inheritGroupNetworkAccess,
         handlers: endpoint.handlers,
         apiVersion: endpoint.apiVersion,
+        dataRetentionDays: endpoint.dataRetentionDays ?? null,
       });
       setEndpoint(updated);
     } catch (err) {
@@ -260,7 +262,18 @@ export default function EndpointEditorPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Path</label>
-              <input className="input font-mono text-sm bg-dark-hover/50" value={endpoint.path} readOnly />
+              <input
+                className={`input font-mono text-sm ${endpoint.isSystem ? 'bg-dark-hover/50' : ''}`}
+                value={endpoint.path}
+                readOnly={endpoint.isSystem}
+                onChange={(e) => setEndpoint({ ...endpoint, path: e.target.value })}
+                placeholder="/api/example"
+              />
+              {!endpoint.isSystem && (
+                <p className="text-xs text-dark-muted mt-1">
+                  Changing the path moves this endpoint&apos;s stored records to the new collection.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Method</label>
@@ -288,6 +301,26 @@ export default function EndpointEditorPage() {
             <input type="checkbox" checked={endpoint.enabled} onChange={(e) => setEndpoint({ ...endpoint, enabled: e.target.checked })} />
             Endpoint enabled
           </label>
+          <div>
+            <label className="block text-sm font-medium mb-1">Data retention (days)</label>
+            <input
+              type="number"
+              min={1}
+              className="input max-w-xs"
+              placeholder="Forever"
+              value={endpoint.dataRetentionDays ?? ''}
+              onChange={(e) => {
+                const raw = e.target.value.trim();
+                setEndpoint({
+                  ...endpoint,
+                  dataRetentionDays: raw === '' ? undefined : Math.max(1, parseInt(raw, 10) || 1),
+                });
+              }}
+            />
+            <p className="text-xs text-dark-muted mt-1">
+              MongoDB auto-deletes records after this many days. Leave empty to keep data forever.
+            </p>
+          </div>
         </div>
       )}
 
@@ -548,6 +581,10 @@ export default function EndpointEditorPage() {
             <span className="font-mono">{String(docs.url)}</span>
           </div>
           <p className="text-dark-muted text-sm">{String(docs.description || '')}</p>
+          <p className="text-sm">
+            <span className="font-medium">Data retention:</span>{' '}
+            {docs.dataRetentionDays ? `${String(docs.dataRetentionDays)} days` : 'Forever'}
+          </p>
           <div>
             <h4 className="text-sm font-semibold mb-2">Parameters</h4>
             {Array.isArray(docs.parameters) && (docs.parameters as SchemaField[]).length > 0 ? (

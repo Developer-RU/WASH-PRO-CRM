@@ -9,6 +9,7 @@ import {
 import { SchemaField, HttpMethod } from '../types';
 import { settingsService } from './settings.service';
 import { normalizeNetworkAccessInput } from '../utils';
+import { computeExpiresAt, normalizeDataRetentionDays } from '../utils/data-retention';
 
 const EXPORT_VERSION = '1.2';
 
@@ -46,6 +47,7 @@ type ExportedEndpoint = {
   inheritGroupNetworkAccess?: boolean;
   handlers: IEndpoint['handlers'];
   enabled: boolean;
+  dataRetentionDays?: number;
 };
 
 type ExportedData = {
@@ -113,6 +115,7 @@ function serializeEndpoint(endpoint: IEndpoint, userGroupNames: Map<string, stri
     inheritGroupNetworkAccess: endpoint.inheritGroupNetworkAccess,
     handlers: endpoint.handlers,
     enabled: endpoint.enabled,
+    dataRetentionDays: endpoint.dataRetentionDays,
   };
 }
 
@@ -220,6 +223,7 @@ export class ProjectService {
     const userGroupNameToId = new Map(allUserGroups.map((g) => [g.name, g._id.toString()]));
 
     const endpointKeyToId = new Map<string, string>();
+    const endpointRetentionById = new Map<string, number | undefined>();
     const existingEndpoints = await endpointRepository.findAll({ isSystem: false });
 
     for (const ep of bundle.endpoints || []) {
@@ -243,16 +247,19 @@ export class ProjectService {
         inheritGroupNetworkAccess: ep.inheritGroupNetworkAccess ?? true,
         handlers: ep.handlers || [],
         enabled: ep.enabled ?? true,
+        dataRetentionDays: normalizeDataRetentionDays(ep.dataRetentionDays),
         isSystem: false,
       };
 
       if (existing) {
         await endpointRepository.update(existing._id.toString(), payload);
         endpointKeyToId.set(ep.key, existing._id.toString());
+        endpointRetentionById.set(ep.key, payload.dataRetentionDays);
         stats.endpointsUpdated++;
       } else {
         const created = await endpointRepository.create(payload);
         endpointKeyToId.set(ep.key, created._id.toString());
+        endpointRetentionById.set(ep.key, payload.dataRetentionDays);
         stats.endpointsCreated++;
       }
     }
@@ -276,7 +283,10 @@ export class ProjectService {
       for (const row of bundle.endpointData) {
         const endpointId = endpointKeyToId.get(row.endpointKey);
         if (!endpointId) continue;
-        await endpointDataRepository.create(endpointId, row.resourcePath, row.data);
+        const retention = endpointRetentionById.get(row.endpointKey);
+        await endpointDataRepository.create(endpointId, row.resourcePath, row.data, {
+          expiresAt: computeExpiresAt(retention),
+        });
         stats.recordsImported++;
       }
     }

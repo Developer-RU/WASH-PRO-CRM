@@ -93,7 +93,32 @@ export const periodLabel: Record<string, string> = {
 };
 
 export const categoryLabel: Record<string, string> = {
-  regular: 'Обычные клиенты',
-  unlimited: 'Безлимитные карты',
-  service: 'Сервисные карты',
+  regular: 'Скидочные клиенты',
+  unlimited: 'VIP-обслуживание',
+  service: 'Сервисное обслуживание',
 };
+
+export const cardTypeLabel: Record<string, string> = {
+  regular: 'Скидочная',
+  unlimited: 'VIP',
+  service: 'Сервисная',
+};
+
+export const logCategoryOptions = [
+  { value: '', label: 'Все категории' },
+  { value: 'api_call', label: 'API запросы' },
+  { value: 'error', label: 'API ответы / ошибки' },
+  { value: 'webhook_dispatch', label: 'Сетевые события' },
+  { value: 'cron_run', label: 'Фоновые задачи' },
+  { value: 'mcp_call', label: 'Внутренние системные' },
+  { value: 'login', label: 'Авторизация' },
+];
+
+export const logLevelOptions = [
+  { value: '', label: 'Все уровни' },
+  { value: 'Debug', label: 'Debug' },
+  { value: 'Info', label: 'Info' },
+  { value: 'Warning', label: 'Warning' },
+  { value: 'Error', label: 'Error' },
+  { value: 'Critical', label: 'Critical' },
+];

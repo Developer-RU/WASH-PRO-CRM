@@ -19,6 +19,7 @@ import {
   resolveEffectiveNetworkAccess,
   checkNetworkAccess,
 } from '../utils';
+import { computeExpiresAt, normalizeDataRetentionDays } from '../utils/data-retention';
 import { resolveLogSource, shouldSkipApiAuditLog } from '../utils/logSource';
 import { resolveLogUserId, compactLogEntry } from '../utils/auditLog';
 import { LogSource } from '../types';
@@ -169,6 +170,7 @@ export class EndpointService {
         code: h.code,
         enabled: h.enabled ?? true,
       })),
+      dataRetentionDays: normalizeDataRetentionDays(dto.dataRetentionDays),
       isSystem: false,
       enabled: true,
       createdBy: userId as unknown as import('mongoose').Types.ObjectId,
@@ -201,8 +203,29 @@ export class EndpointService {
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.description !== undefined) updateData.description = dto.description;
     if (dto.slug !== undefined) updateData.slug = dto.slug;
-    if (dto.path !== undefined) updateData.path = normalizePath(dto.path);
-    if (dto.method !== undefined) updateData.method = dto.method.toUpperCase();
+
+    const nextPath = dto.path !== undefined ? normalizePath(dto.path) : endpoint.path;
+    const nextMethod = (dto.method !== undefined ? dto.method : endpoint.method).toUpperCase() as HttpMethod;
+
+    if (dto.path !== undefined || dto.method !== undefined) {
+      if (endpoint.isSystem && (nextPath !== endpoint.path || nextMethod !== endpoint.method)) {
+        throw new Error('Cannot change path or method of system endpoint');
+      }
+
+      const duplicate = await endpointRepository.findByPathAndMethod(nextPath, nextMethod, id);
+      if (duplicate) throw new Error('Endpoint with this path and method already exists');
+
+      if (dto.path !== undefined && nextPath !== endpoint.path) {
+        const oldCollection = getCollectionPath(endpoint.path);
+        const newCollection = getCollectionPath(nextPath);
+        if (oldCollection !== newCollection) {
+          await endpointDataRepository.migrateResourcePathForEndpoint(id, newCollection);
+        }
+        updateData.path = nextPath;
+      }
+
+      if (dto.method !== undefined) updateData.method = nextMethod;
+    }
     if (dto.apiVersion !== undefined) updateData.apiVersion = dto.apiVersion?.trim() || undefined;
     if (dto.groupId !== undefined) updateData.groupId = dto.groupId;
     if (dto.accessType !== undefined) updateData.accessType = dto.accessType;
@@ -210,6 +233,9 @@ export class EndpointService {
     if (dto.enabled !== undefined) updateData.enabled = dto.enabled;
     if (dto.networkAccess !== undefined) updateData.networkAccess = parseNetworkAccessInput(dto.networkAccess);
     if (dto.inheritGroupNetworkAccess !== undefined) updateData.inheritGroupNetworkAccess = dto.inheritGroupNetworkAccess;
+    if (dto.dataRetentionDays !== undefined) {
+      updateData.dataRetentionDays = normalizeDataRetentionDays(dto.dataRetentionDays);
+    }
 
     if (dto.schema !== undefined) {
       updateData.fields = dto.schema.map((f, i) => ({
@@ -290,6 +316,7 @@ export class EndpointService {
       method: endpoint.method,
       accessType: endpoint.accessType,
       parameters: endpoint.fields,
+      dataRetentionDays: endpoint.dataRetentionDays ?? null,
       requestBody: examples.request,
       exampleResponse: examples.response,
     };
@@ -533,7 +560,8 @@ export class DynamicEngine {
           headers: options?.networkMeta?.headers || {},
         },
         endpoint._id.toString(),
-        collectionPath
+        collectionPath,
+        endpoint.dataRetentionDays
       );
       return { __handlerResponse: true, statusCode: result.statusCode, body: result.body };
     }
@@ -579,7 +607,12 @@ export class DynamicEngine {
 
         const data = applyDefaults(pickSchemaData(rawBody, endpoint.fields), endpoint.fields);
         await this.assertReferences(data, endpoint.fields);
-        const record = await endpointDataRepository.create(endpoint._id.toString(), collectionPath, data);
+        const record = await endpointDataRepository.create(
+          endpoint._id.toString(),
+          collectionPath,
+          data,
+          { expiresAt: computeExpiresAt(endpoint.dataRetentionDays) }
+        );
         return { success: true, data: { id: record._id, ...record.data } };
       }
 

@@ -87,8 +87,10 @@ export class EndpointRepository {
     return Endpoint.findById(id).populate('groupId').populate('allowedGroupIds');
   }
 
-  async findByPathAndMethod(path: string, method: string): Promise<IEndpoint | null> {
-    return Endpoint.findOne({ path, method: method.toUpperCase(), enabled: true });
+  async findByPathAndMethod(path: string, method: string, excludeId?: string): Promise<IEndpoint | null> {
+    const filter: FilterQuery<IEndpoint> = { path, method: method.toUpperCase() };
+    if (excludeId) filter._id = { $ne: excludeId };
+    return Endpoint.findOne(filter);
   }
 
   async findAll(filter: FilterQuery<IEndpoint> = {}): Promise<IEndpoint[]> {
@@ -183,8 +185,18 @@ export class EndpointDataRepository {
     return EndpointData.findById(id);
   }
 
-  async create(endpointId: string, resourcePath: string, data: Record<string, unknown>): Promise<IEndpointData> {
-    return EndpointData.create({ endpointId, resourcePath, data });
+  async create(
+    endpointId: string,
+    resourcePath: string,
+    data: Record<string, unknown>,
+    options?: { expiresAt?: Date }
+  ): Promise<IEndpointData> {
+    return EndpointData.create({
+      endpointId,
+      resourcePath,
+      data,
+      ...(options?.expiresAt ? { expiresAt: options.expiresAt } : {}),
+    });
   }
 
   async update(id: string, data: Record<string, unknown>): Promise<IEndpointData | null> {
@@ -194,6 +206,11 @@ export class EndpointDataRepository {
   async delete(id: string): Promise<boolean> {
     const result = await EndpointData.findByIdAndDelete(id);
     return !!result;
+  }
+
+  async migrateResourcePathForEndpoint(endpointId: string, resourcePath: string): Promise<number> {
+    const result = await EndpointData.updateMany({ endpointId }, { $set: { resourcePath } });
+    return result.modifiedCount ?? 0;
   }
 }
 

@@ -34,6 +34,8 @@ export function createApp(): express.Application {
   app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: env.nodeEnv === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
   }));
 
   const corsOrigins = env.corsOrigin.split(',').map((o) => o.trim()).filter(Boolean);

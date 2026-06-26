@@ -2,11 +2,12 @@ import { useEffect, useState, ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Shield, Globe, FileText,
-  LogOut, Sun, Moon, Zap, Menu, X, Server, Folders, Settings,
-  BookOpen, Github, Network, Database, FileCode, Clock, Webhook, Key, Bot,
+  LogOut, Zap, Menu, X, Server, Folders, Settings,
+  BookOpen, Github, Network, Database, FileCode, Clock, Webhook, Key, Bot, Palette,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getThemeOption } from '../themes';
 import { userHasPermission } from '../utils/permissions';
 import UpdateBanner from './UpdateBanner';
 
@@ -76,7 +77,8 @@ function navClass(isActive: boolean) {
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, cycleTheme } = useTheme();
+  const themeLabel = getThemeOption(theme)?.label ?? theme;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [appVersion, setAppVersion] = useState('');
 
@@ -204,8 +206,13 @@ export default function Layout({ children }: { children: ReactNode }) {
               <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{user?.name}</div>
               <div className="text-xs text-slate-500">{user?.login}</div>
             </div>
-            <button type="button" onClick={toggleTheme} className="btn-secondary !px-2.5 !py-2" title="Toggle theme">
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <button
+              type="button"
+              onClick={cycleTheme}
+              className="btn-secondary !px-2.5 !py-2"
+              title={`Theme: ${themeLabel} — click to switch`}
+            >
+              <Palette className="h-4 w-4" />
             </button>
             <button type="button" onClick={logout} className="btn-secondary !px-2.5 !py-2" title="Logout">
               <LogOut className="h-4 w-4" />

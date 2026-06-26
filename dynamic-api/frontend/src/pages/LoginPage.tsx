@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Zap, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getThemeOption } from '../themes';
 
 export default function LoginPage() {
   const [login, setLogin] = useState('');
@@ -11,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login: doLogin } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, cycleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,10 +89,10 @@ export default function LoginPage() {
         <div className="mt-4 flex flex-col items-center gap-2 text-center text-sm">
           <button
             type="button"
-            onClick={toggleTheme}
+            onClick={cycleTheme}
             className="text-slate-500 hover:text-brand-600 dark:hover:text-brand-300"
           >
-            {theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            Theme: {getThemeOption(theme)?.label ?? theme} — click to change
           </button>
           <div className="flex items-center gap-3 text-slate-500">
             <a

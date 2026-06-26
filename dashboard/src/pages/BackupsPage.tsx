@@ -1,30 +1,32 @@
-import { useEffect, useState } from 'react';
-import { HardDrive } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { HardDrive, Trash2 } from 'lucide-react';
 import { api, apiList } from '../api/client';
-import { PageHeader, Table, Loading, Badge } from '../components/UI';
-import type { BackupRecord, CrmSetting } from '../types';
+import { PageHeader, Loading, Badge } from '../components/UI';
+import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
+import { usePolling } from '../hooks/usePolling';
+import type { BackupRecord } from '../types';
 
 export function BackupsPage() {
-  const [backups, setBackups] = useState<BackupRecord[]>([]);
   const [settings, setSettings] = useState({ enabled: true, cron: '0 2 * * *', retentionCount: 7 });
   const [settingId, setSettingId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const load = async () => {
-    const [b, s] = await Promise.all([
+  const fetchData = useCallback(async () => {
+    const [backups, crmSettings] = await Promise.all([
       apiList<BackupRecord>('/crm/backups'),
-      apiList<CrmSetting>('/crm/settings'),
+      apiList<{ id: string; key: string; value: Record<string, unknown> }>('/crm/settings'),
     ]);
-    setBackups(b);
-    const backup = s.find((x) => x.key === 'backup');
-    if (backup) {
-      setSettingId(backup.id);
-      setSettings(backup.value as typeof settings);
-    }
-    setLoading(false);
-  };
+    const backupSetting = crmSettings.find((x) => x.key === 'backup');
+    return { backups, backupSetting };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: 15000 });
+
+  useEffect(() => {
+    if (data?.backupSetting) {
+      setSettingId(data.backupSetting.id);
+      setSettings(data.backupSetting.value as typeof settings);
+    }
+  }, [data?.backupSetting]);
 
   const createManual = async () => {
     await api('/crm/backups', {
@@ -36,8 +38,7 @@ export function BackupsPage() {
         createdAt: new Date().toISOString(),
       }),
     });
-    alert('Запрос на резервное копирование создан. Сервис backup выполнит операцию по расписанию или при следующем цикле.');
-    load();
+    refresh();
   };
 
   const saveSettings = async () => {
@@ -49,14 +50,105 @@ export function BackupsPage() {
     alert('Настройки сохранены');
   };
 
-  if (loading) return <Loading />;
+  const deleteBackup = async (id: string, filename: string) => {
+    if (!confirm(`Удалить резервную копию «${filename}»?`)) return;
+    try {
+      await api(`/crm/backups/${id}`, { method: 'DELETE' });
+    } catch {
+      await api(`/crm/backups/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'failed', error: 'deleted_by_user', filename: `[deleted] ${filename}` }),
+      });
+    }
+    refresh();
+  };
+
+  const filters: DataTableFilter<BackupRecord>[] = [
+    {
+      id: 'status',
+      label: 'Статус',
+      options: [
+        { value: 'completed', label: 'completed' },
+        { value: 'failed', label: 'failed' },
+        { value: 'in_progress', label: 'in_progress' },
+      ],
+      match: (b, v) => b.status === v,
+    },
+    {
+      id: 'type',
+      label: 'Тип',
+      options: [
+        { value: 'auto', label: 'Авто' },
+        { value: 'manual', label: 'Ручная' },
+      ],
+      match: (b, v) => b.type === v,
+    },
+  ];
+
+  const columns: DataTableColumn<BackupRecord>[] = [
+    {
+      key: 'filename',
+      header: 'Файл',
+      sortValue: (b) => b.filename,
+      searchValue: (b) => b.filename,
+      render: (b) => <span className="font-mono text-xs">{b.filename}</span>,
+    },
+    {
+      key: 'type',
+      header: 'Тип',
+      sortable: true,
+      sortValue: (b) => b.type,
+      render: (b) => (b.type === 'auto' ? 'Авто' : 'Ручная'),
+    },
+    {
+      key: 'size',
+      header: 'Размер',
+      sortable: true,
+      sortValue: (b) => b.size || 0,
+      render: (b) => (b.size ? `${(b.size / 1024 / 1024).toFixed(2)} МБ` : '—'),
+    },
+    {
+      key: 'status',
+      header: 'Статус',
+      sortable: true,
+      sortValue: (b) => b.status,
+      render: (b) => (
+        <Badge variant={b.status === 'completed' ? 'success' : b.status === 'failed' ? 'error' : 'warning'}>
+          {b.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'createdAt',
+      header: 'Дата',
+      sortable: true,
+      sortValue: (b) => b.createdAt || '',
+      render: (b) => (b.createdAt ? new Date(b.createdAt).toLocaleString('ru') : '—'),
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (b) => (
+        <button
+          type="button"
+          className="btn-secondary text-red-600 !py-1 !px-2"
+          onClick={() => deleteBackup(b.id, b.filename)}
+          title="Удалить резервную копию"
+        >
+          <Trash2 size={14} />
+        </button>
+      ),
+    },
+  ];
+
+  if (loading && !data) return <Loading />;
 
   return (
     <div>
       <PageHeader
         title="Резервные копии"
         subtitle="Автоматическое и ручное резервное копирование MongoDB"
-        actions={<button className="btn-primary" onClick={createManual}><HardDrive size={16} /> Создать копию</button>}
+        actions={<button type="button" className="btn-primary" onClick={createManual}><HardDrive size={16} /> Создать копию</button>}
       />
 
       <div className="card mb-6 max-w-lg space-y-3">
@@ -73,35 +165,10 @@ export function BackupsPage() {
           <label className="label">Количество копий</label>
           <input className="input" type="number" min={1} max={30} value={settings.retentionCount} onChange={(e) => setSettings({ ...settings, retentionCount: Number(e.target.value) })} />
         </div>
-        <button className="btn-primary" onClick={saveSettings}>Сохранить настройки</button>
+        <button type="button" className="btn-primary" onClick={saveSettings}>Сохранить настройки</button>
       </div>
 
-      <Table>
-        <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-          <tr>
-            <th className="px-4 py-3">Файл</th>
-            <th className="px-4 py-3">Тип</th>
-            <th className="px-4 py-3">Размер</th>
-            <th className="px-4 py-3">Статус</th>
-            <th className="px-4 py-3">Дата</th>
-          </tr>
-        </thead>
-        <tbody>
-          {backups.map((b) => (
-            <tr key={b.id} className="border-b border-slate-100 dark:border-slate-800">
-              <td className="px-4 py-3 font-mono text-xs">{b.filename}</td>
-              <td className="px-4 py-3">{b.type === 'auto' ? 'Авто' : 'Ручная'}</td>
-              <td className="px-4 py-3">{b.size ? `${(b.size / 1024 / 1024).toFixed(2)} МБ` : '—'}</td>
-              <td className="px-4 py-3">
-                <Badge variant={b.status === 'completed' ? 'success' : b.status === 'failed' ? 'error' : 'warning'}>
-                  {b.status}
-                </Badge>
-              </td>
-              <td className="px-4 py-3">{b.createdAt ? new Date(b.createdAt).toLocaleString('ru') : '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      <DataTable columns={columns} data={data?.backups || []} rowKey={(b) => b.id} filters={filters} searchPlaceholder="Поиск копий…" />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { PageHeader, LoadingSpinner } from '../components/UI';
 import WashSoftwareUpdatesSection from '../components/WashSoftwareUpdatesSection';
 
 const washEmbedded = import.meta.env.VITE_WASH_EMBEDDED === 'true';
+import { THEME_OPTIONS } from '../themes';
 
 function msToMinutes(ms: number): number {
   return Math.round(ms / 60000);
@@ -373,6 +374,18 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="flex justify-between">
+                <span className="text-dark-muted">Status</span>
+                <span className={
+                  updateStatus.updateAvailable ? 'text-amber-600 font-medium' : 'text-green-600 font-medium'
+                }>
+                  {updateStatus.updateAvailable
+                    ? 'Update available'
+                    : updateStatus.latestVersion
+                      ? 'Up to date'
+                      : 'Unknown'}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-dark-muted">Last check</span>
                 <span className="text-xs">
                   {updateStatus.checkedAt ? new Date(updateStatus.checkedAt).toLocaleString() : 'Never'}
@@ -547,12 +560,23 @@ export default function SettingsPage() {
                 onChange={(e) => setSettings({ ...settings, endpointsPerPage: parseInt(e.target.value) || 50 })} />
             </Field>
           </div>
-          <Field label="Default theme">
+          <Field label="Default theme" hint="Suggested theme for new users — each user can switch anytime via the palette button in the header">
             <select className="select" value={settings.defaultTheme}
               onChange={(e) => setSettings({ ...settings, defaultTheme: e.target.value })}>
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
+              {THEME_OPTIONS.map((t) => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+              ))}
             </select>
+            <p className="text-xs text-dark-muted mt-2">
+              {THEME_OPTIONS.find((t) => t.id === settings.defaultTheme)?.description}
+            </p>
+            <ul className="mt-3 space-y-2 text-xs text-dark-muted">
+              {THEME_OPTIONS.map((t) => (
+                <li key={t.id}>
+                  <span className="font-medium text-dark-text">{t.label}</span> — {t.description}
+                </li>
+              ))}
+            </ul>
           </Field>
         </SettingSection>
       </div>

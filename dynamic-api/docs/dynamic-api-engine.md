@@ -33,6 +33,29 @@ Dynamic parameters supported:
 
 Parameters extracted and available in handlers.
 
+## Editable path
+
+After creation you can change an endpoint's **path** in the admin UI (**Endpoints → edit → General**). The platform:
+
+- Normalizes the new path (leading `/`, no trailing slash)
+- Checks that **path + method** is unique
+- Migrates this endpoint's stored records to the new `resourcePath` collection
+
+System endpoints cannot change path or method.
+
+## Data retention (TTL)
+
+Each endpoint can limit how long its records live in MongoDB:
+
+| Setting | Location | Behavior |
+|---------|----------|----------|
+| **Data retention (days)** | Endpoint editor → General | Positive integer — records auto-delete after N days |
+| *(empty)* | Default | Data is kept **forever** |
+
+On **POST** (and `db.create` in JS handlers), the engine sets `expiresAt` on the document. MongoDB TTL index removes expired rows automatically (typically within ~60 seconds).
+
+Retention applies per endpoint — shared collections keep records from other routes on the same base path unchanged when you move only one endpoint.
+
 ## Schema field types
 
 | Type | Validation | Example |

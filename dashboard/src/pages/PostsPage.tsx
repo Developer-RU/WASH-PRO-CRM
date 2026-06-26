@@ -1,30 +1,97 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { api, apiList } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { PageHeader, Table, Loading, Modal, Badge, statusLabel } from '../components/UI';
+import { usePolling } from '../hooks/usePolling';
+import { PageHeader, Loading, Modal, Badge, statusLabel } from '../components/UI';
+import { DataTable, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
 import type { Post, Wash } from '../types';
 
 export function PostsPage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('create', 'update');
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [washes, setWashes] = useState<Wash[]>([]);
-  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ washId: '', postNumber: 1, name: '', serialNumber: '', status: 'offline' as Post['status'] });
 
-  const load = async () => {
-    setLoading(true);
-    const [p, w] = await Promise.all([apiList<Post>('/crm/posts'), apiList<Wash>('/crm/washes')]);
-    setPosts(p);
-    setWashes(w);
-    setLoading(false);
-  };
+  const fetchData = useCallback(async () => {
+    const [posts, washes] = await Promise.all([apiList<Post>('/crm/posts'), apiList<Wash>('/crm/washes')]);
+    return { posts, washes };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: 10000 });
 
-  const washName = (id: string) => washes.find((w) => w.id === id)?.name || id.slice(-6);
+  const washName = useCallback(
+    (id: string) => data?.washes.find((w) => w.id === id)?.name || id.slice(-6),
+    [data?.washes]
+  );
+
+  const filters: DataTableFilter<Post>[] = useMemo(() => {
+    const washOptions = (data?.washes || []).map((w) => ({ value: w.id, label: w.name }));
+    return [
+      {
+        id: 'status',
+        label: 'Статус',
+        options: [
+          { value: 'online', label: 'Онлайн' },
+          { value: 'offline', label: 'Офлайн' },
+          { value: 'error', label: 'Ошибка' },
+          { value: 'maintenance', label: 'Обслуживание' },
+        ],
+        match: (p, v) => p.status === v,
+      },
+      {
+        id: 'washId',
+        label: 'Объект',
+        options: washOptions,
+        match: (p, v) => p.washId === v,
+      },
+    ];
+  }, [data?.washes]);
+
+  const columns: DataTableColumn<Post>[] = useMemo(
+    () => [
+      {
+        key: 'postNumber',
+        header: 'Номер поста',
+        sortValue: (p) => p.postNumber,
+        searchValue: (p) => `${p.postNumber} ${p.name} ${p.serialNumber}`,
+        render: (p) => <span className="font-mono">{p.postNumber}</span>,
+      },
+      {
+        key: 'wash',
+        header: 'Объект',
+        sortValue: (p) => washName(p.washId),
+        searchValue: (p) => washName(p.washId),
+        render: (p) => washName(p.washId),
+      },
+      {
+        key: 'name',
+        header: 'Название',
+        searchValue: (p) => p.name,
+        sortValue: (p) => p.name,
+        render: (p) => p.name,
+      },
+      {
+        key: 'serialNumber',
+        header: 'Серийный номер',
+        sortValue: (p) => p.serialNumber,
+        searchValue: (p) => p.serialNumber,
+        render: (p) => <span className="font-mono text-xs">{p.serialNumber}</span>,
+      },
+      {
+        key: 'status',
+        header: 'Статус',
+        sortValue: (p) => p.status,
+        searchValue: (p) => p.status,
+        render: (p) => (
+          <Badge variant={p.status === 'online' ? 'success' : p.status === 'error' ? 'error' : 'warning'}>
+            {statusLabel[p.status] || p.status}
+          </Badge>
+        ),
+      },
+    ],
+    [washName]
+  );
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -33,52 +100,27 @@ export function PostsPage() {
       body: JSON.stringify({ ...form, postNumber: Number(form.postNumber), settings: {} }),
     });
     setModal(false);
-    load();
+    refresh();
   };
 
-  if (loading) return <Loading />;
+  if (loading && !data) return <Loading />;
 
   return (
     <div>
       <PageHeader
         title="Посты"
-        subtitle="Управление постами автомоек"
-        actions={canEdit && <button className="btn-primary" onClick={() => setModal(true)}><Plus size={16} /> Добавить</button>}
+        subtitle="Посты объектов самообслуживания"
+        actions={canEdit && <button type="button" className="btn-primary" onClick={() => setModal(true)}><Plus size={16} /> Добавить</button>}
       />
-      <Table>
-        <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-          <tr>
-            <th className="px-4 py-3">№</th>
-            <th className="px-4 py-3">Название</th>
-            <th className="px-4 py-3">Автомойка</th>
-            <th className="px-4 py-3">Серийный №</th>
-            <th className="px-4 py-3">Статус</th>
-          </tr>
-        </thead>
-        <tbody>
-          {posts.map((p) => (
-            <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800">
-              <td className="px-4 py-3 font-mono">{p.postNumber}</td>
-              <td className="px-4 py-3 font-medium">{p.name}</td>
-              <td className="px-4 py-3">{washName(p.washId)}</td>
-              <td className="px-4 py-3 font-mono text-xs">{p.serialNumber}</td>
-              <td className="px-4 py-3">
-                <Badge variant={p.status === 'online' ? 'success' : p.status === 'error' ? 'error' : 'warning'}>
-                  {statusLabel[p.status] || p.status}
-                </Badge>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      <DataTable columns={columns} data={data?.posts || []} rowKey={(p) => p.id} filters={filters} searchPlaceholder="Поиск постов…" />
 
       <Modal open={modal} onClose={() => setModal(false)} title="Новый пост">
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="label">Автомойка</label>
+            <label className="label">Объект</label>
             <select className="input" value={form.washId} onChange={(e) => setForm({ ...form, washId: e.target.value })} required>
               <option value="">Выберите...</option>
-              {washes.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+              {(data?.washes || []).map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </div>
           <div><label className="label">Номер поста</label><input className="input" type="number" min={1} value={form.postNumber} onChange={(e) => setForm({ ...form, postNumber: Number(e.target.value) })} required /></div>

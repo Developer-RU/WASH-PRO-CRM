@@ -11,3 +11,4 @@
 # WASH-специфика docker-compose:
 # - build context: ./dynamic-api (не backend/) — нужны scripts/ для v1.5+
 # - UPDATE_EXECUTOR_ENABLED=false — in-app updater не применим к vendored-копии
+# - backend/Dockerfile: удалить ENV APP_VERSION (версия из package.json)

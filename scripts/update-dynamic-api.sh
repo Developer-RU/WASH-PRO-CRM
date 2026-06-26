@@ -11,7 +11,8 @@ echo "==> Fetch upstream: $UPSTREAM_REPO ($UPSTREAM_REF)"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
-git -C "$tmpdir" init -q
+# Без шаблонов hooks — иначе падает в sandbox (Operation not permitted на .git/hooks)
+GIT_TEMPLATE_DIR=/dev/null git -C "$tmpdir" init -q
 git -C "$tmpdir" remote add origin "$UPSTREAM_REPO"
 git -C "$tmpdir" fetch -q origin "${UPSTREAM_REF#origin/}" --depth 1
 
@@ -41,5 +42,17 @@ fi
 echo "==> Apply WASH embedded panel UI"
 bash "$ROOT/patches/wash-embedded/apply-wash-embedded-ui.sh" "$DA"
 
+# Upstream Dockerfile задаёт устаревший ENV APP_VERSION — мешает отображению реальной версии из package.json
+if grep -q '^ENV APP_VERSION=' "$DA/backend/Dockerfile" 2>/dev/null; then
+  perl -i -pe 's/^ENV APP_VERSION=.*\n//;' "$DA/backend/Dockerfile"
+  echo "==> Removed stale ENV APP_VERSION from backend/Dockerfile"
+fi
+
+DA_VERSION="$(node -p "require('$DA/backend/package.json').version" 2>/dev/null || echo '?')"
+if [ -f "$ROOT/.env.example" ] && [ "$DA_VERSION" != '?' ]; then
+  perl -i -pe "s/^DYNAMIC_API_VERSION=.*/DYNAMIC_API_VERSION=$DA_VERSION/" "$ROOT/.env.example"
+fi
+
+echo "==> Dynamic API Platform v$DA_VERSION"
 echo "==> Done. Rebuild: docker compose up -d --build dynamic-api dynamic-api-panel"
 echo "    Then if needed: ./scripts/run-init-seed.sh"

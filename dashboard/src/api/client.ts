@@ -137,9 +137,9 @@ export async function getProfile() {
   return api<import('../types').User>('/profile');
 }
 
-export async function getSystemLogs(page = 1) {
+export async function getSystemLogs(query = 'page=1&limit=50') {
   const res = await api<{ data: import('../types').LogEntry[] } | import('../types').LogEntry[]>(
-    `/dashboard/logs?page=${page}&limit=50`
+    `/dashboard/logs?${query}`
   );
   if (Array.isArray(res)) return res;
   return (res as { data: import('../types').LogEntry[] }).data || [];

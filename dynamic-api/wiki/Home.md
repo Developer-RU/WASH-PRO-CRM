@@ -1,4 +1,4 @@
-Welcome to the **Dynamic API Platform** wiki (v1.5.6).
+Welcome to the **Dynamic API Platform** wiki (v1.5.9).
 
 Create, manage, and test REST APIs without writing backend code.
 
@@ -11,6 +11,8 @@ Endpoints are stored in MongoDB and served **at runtime** — add or change a ro
 | Area | Summary |
 |------|---------|
 | **Software updates** | GitHub release checks, **Update now**, auto-update in Docker, stale-job cleanup, cancel — [Software Updates](Software-Updates) |
+| **Endpoint data** | Optional **data retention** (TTL days or forever), **editable path** — [Dynamic API Engine](Dynamic-API-Engine) |
+| **UI themes** | Dark, Light, **Ocean**, **Forest** — [Themes](Themes) |
 | **System page** | Correct installed version, auto-update status |
 | **v1.4 deployment** | Docker single-node, MongoDB replica set, Kubernetes — [Deployment Variants](Deployment-Variants) |
 | **Testing** | Vitest (30 tests), load test, CI — [Testing](Testing) |

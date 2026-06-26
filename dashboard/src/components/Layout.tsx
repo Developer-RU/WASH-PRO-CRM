@@ -11,6 +11,7 @@ import {
   HardDrive,
   Bot,
   Bell,
+  Coins,
   FileText,
   LogOut,
   Moon,
@@ -44,21 +45,25 @@ const navGroups: NavGroup[] = [
   {
     title: 'Объекты',
     items: [
-      { to: '/washes', label: 'Автомойки', icon: Building2 },
+      { to: '/washes', label: 'Объекты', icon: Building2 },
       { to: '/posts', label: 'Посты', icon: Columns3 },
-      { to: '/states', label: 'Состояние', icon: Activity },
+      { to: '/states', label: 'Текущее состояние', icon: Activity },
     ],
   },
   {
-    title: 'Клиенты',
-    items: [{ to: '/cards', label: 'Карты', icon: CreditCard }],
+    title: 'Карты',
+    items: [
+      { to: '/cards/discount', label: 'Скидочные', icon: CreditCard },
+      { to: '/cards/service', label: 'Сервисные', icon: CreditCard },
+      { to: '/cards/vip', label: 'VIP', icon: CreditCard },
+    ],
   },
   {
     title: 'Аналитика',
     items: [
-      { to: '/usage', label: 'Статистика', icon: BarChart3 },
-      { to: '/finance', label: 'Финансы', icon: Wallet },
-      { to: '/archive', label: 'Архив', icon: Archive },
+      { to: '/usage', label: 'Статистика использования', icon: BarChart3 },
+      { to: '/finance', label: 'Финансовая статистика', icon: Wallet },
+      { to: '/archive', label: 'Архивирование', icon: Archive },
     ],
   },
   {
@@ -67,6 +72,7 @@ const navGroups: NavGroup[] = [
       { to: '/notifications', label: 'Уведомления', icon: Bell },
       { to: '/backups', label: 'Резервные копии', icon: HardDrive, admin: true },
       { to: '/telegram', label: 'Telegram', icon: Bot, admin: true },
+      { to: '/currency', label: 'Валюты', icon: Coins, admin: true },
       { to: '/logs', label: 'Логи', icon: FileText, admin: true },
     ],
   },

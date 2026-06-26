@@ -1,31 +1,39 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { api, apiList } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { PageHeader, Table, Loading, Modal, ErrorMessage } from '../components/UI';
-import type { Wash } from '../types';
+import { usePolling } from '../hooks/usePolling';
+import { PageHeader, Loading, Modal, ErrorMessage } from '../components/UI';
+import { DataTable, type DataTableColumn } from '../components/DataTable';
+import type { Wash, Post } from '../types';
 
 const emptyForm = { name: '', description: '', address: '', registeredAt: undefined as string | undefined, cloudEnabled: false };
 
 export function WashesPage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('create', 'update', 'delete');
-  const [items, setItems] = useState<Wash[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
 
-  const load = () => {
-    setLoading(true);
-    apiList<Wash>('/crm/washes')
-      .then(setItems)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  };
+  const fetchData = useCallback(async () => {
+    const [washes, posts] = await Promise.all([
+      apiList<Wash>('/crm/washes'),
+      apiList<Post>('/crm/posts'),
+    ]);
+    return { washes, posts };
+  }, []);
 
-  useEffect(load, []);
+  const { data, loading, refresh } = usePolling(fetchData, [], { intervalMs: 15000 });
+
+  const postCountByWash = useMemo(() => {
+    const map: Record<string, number> = {};
+    data?.posts.forEach((p) => {
+      map[p.washId] = (map[p.washId] || 0) + 1;
+    });
+    return map;
+  }, [data?.posts]);
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -45,6 +53,75 @@ export function WashesPage() {
     setModal(true);
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Удалить объект?')) return;
+    try {
+      await api(`/crm/washes/${id}`, { method: 'DELETE' });
+      refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления');
+    }
+  };
+
+  const columns: DataTableColumn<Wash>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Название объекта',
+        sortable: true,
+        searchValue: (w) => `${w.name} ${w.description || ''}`,
+        sortValue: (w) => w.name,
+        render: (w) => (
+          <div>
+            <div className="font-medium">{w.name}</div>
+            {w.description && <div className="text-xs text-slate-500">{w.description}</div>}
+          </div>
+        ),
+      },
+      {
+        key: 'address',
+        header: 'Адрес',
+        sortable: true,
+        searchValue: (w) => w.address,
+        sortValue: (w) => w.address,
+        render: (w) => w.address,
+      },
+      {
+        key: 'registeredAt',
+        header: 'Дата регистрации',
+        sortable: true,
+        sortValue: (w) => w.registeredAt || '',
+        render: (w) => (w.registeredAt ? new Date(w.registeredAt).toLocaleDateString('ru') : '—'),
+      },
+      {
+        key: 'posts',
+        header: 'Количество постов',
+        sortable: true,
+        sortValue: (w) => postCountByWash[w.id] || 0,
+        render: (w) => postCountByWash[w.id] || 0,
+      },
+      ...(canEdit
+        ? [
+            {
+              key: 'actions',
+              header: '',
+              render: (w: Wash) => (
+                <div className="text-right">
+                  <button type="button" className="btn-secondary mr-2" onClick={() => openEdit(w)}>
+                    Изменить
+                  </button>
+                  <button type="button" className="btn-secondary text-red-600" onClick={() => handleDelete(w.id)}>
+                    Удалить
+                  </button>
+                </div>
+              ),
+            } as DataTableColumn<Wash>,
+          ]
+        : []),
+    ],
+    [canEdit, postCountByWash]
+  );
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
@@ -56,73 +133,37 @@ export function WashesPage() {
             registeredAt: form.registeredAt || new Date().toISOString(),
             cloudEnabled: form.cloudEnabled ?? false,
           }
-        : {
-            ...form,
-            registeredAt: new Date().toISOString(),
-            cloudEnabled: false,
-          };
+        : { ...form, registeredAt: new Date().toISOString(), cloudEnabled: false };
       if (editId) {
         await api(`/crm/washes/${editId}`, { method: 'PUT', body: JSON.stringify(body) });
       } else {
         await api('/crm/washes', { method: 'POST', body: JSON.stringify(body) });
       }
       setModal(false);
-      load();
+      refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Удалить автомойку?')) return;
-    try {
-      await api(`/crm/washes/${id}`, { method: 'DELETE' });
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка удаления');
-    }
-  };
-
-  if (loading) return <Loading />;
+  if (loading && !data) return <Loading />;
 
   return (
     <div>
       <PageHeader
-        title="Автомойки"
-        subtitle="Управление автомойками самообслуживания"
+        title="Объекты"
+        subtitle="Управление объектами самообслуживания"
         actions={canEdit && <button className="btn-primary" onClick={openCreate}><Plus size={16} /> Добавить</button>}
       />
       {error && <div className="mb-4"><ErrorMessage message={error} /></div>}
-      <Table>
-        <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-          <tr>
-            <th className="px-4 py-3 font-medium">Название</th>
-            <th className="px-4 py-3 font-medium">Адрес</th>
-            <th className="px-4 py-3 font-medium">Регистрация</th>
-            {canEdit && <th className="px-4 py-3" />}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((w) => (
-            <tr key={w.id} className="border-b border-slate-100 dark:border-slate-800">
-              <td className="px-4 py-3">
-                <div className="font-medium">{w.name}</div>
-                {w.description && <div className="text-xs text-slate-500">{w.description}</div>}
-              </td>
-              <td className="px-4 py-3">{w.address}</td>
-              <td className="px-4 py-3 text-sm">{w.registeredAt ? new Date(w.registeredAt).toLocaleDateString('ru') : '—'}</td>
-              {canEdit && (
-                <td className="px-4 py-3 text-right">
-                  <button className="btn-secondary mr-2" onClick={() => openEdit(w)}>Изменить</button>
-                  <button className="btn-secondary text-red-600" onClick={() => handleDelete(w.id)}>Удалить</button>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      <DataTable
+        columns={columns}
+        data={data?.washes || []}
+        rowKey={(w) => w.id}
+        searchPlaceholder="Поиск объектов…"
+      />
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Редактировать' : 'Новая автомойка'}>
+      <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Редактировать объект' : 'Новый объект'}>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div><label className="label">Название</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
           <div><label className="label">Описание</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>

@@ -81,6 +81,14 @@ Rate limit middleware reads cached settings and updates without restart.
 | Logs per page | Default for Logs page |
 | Users per page | Default for Users page |
 
+### Display
+
+| Setting | Options | Description |
+|---------|---------|-------------|
+| Default theme | Dark, Light, Ocean, Forest | Suggested theme for new users; each user switches via palette button in header |
+
+Details: [UI Themes]({{ '/themes/' | relative_url }})
+
 ### Software updates
 
 Configured via separate API (`/api/updates/settings`). See [Software Updates]({{ '/updates/' | relative_url }}).
