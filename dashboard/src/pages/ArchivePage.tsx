@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { Download, Trash2 } from 'lucide-react';
 import { api, apiList } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { PageHeader, Loading } from '../components/UI';
@@ -9,6 +10,7 @@ import type { ArchiveLog, CrmSetting, ArchiveGroupSettings, ArchiveSettings } fr
 import { createExportBulkAction } from '../utils/export';
 import { formatDateTime } from '../utils/format';
 import { executeArchiveGroup, type ArchiveGroupKey } from '../utils/archive';
+import { deleteArchiveFile, downloadArchiveFile, downloadJson } from '../utils/download';
 
 const RETENTION_OPTIONS = [30, 90, 180, 365];
 
@@ -50,6 +52,7 @@ interface ArchivePageData {
 export function ArchivePage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('update', 'delete');
+  const canDelete = hasPermission('delete');
   const canRun = hasPermission('update');
   const [setting, setSetting] = useState<ArchiveSettings>(normalizeArchiveSettings({}));
   const [settingId, setSettingId] = useState<string | null>(null);
@@ -107,21 +110,26 @@ export function ArchivePage() {
     setError('');
     setMessage('');
     try {
-      const affected = await executeArchiveGroup(groupKey, group);
+      const result = await executeArchiveGroup(groupKey, group);
       await api('/crm/archive-logs', {
         method: 'POST',
         body: JSON.stringify({
           action: 'archive',
-          recordsAffected: affected,
+          recordsAffected: result.affected,
           policyDays: group.retentionDays,
           createdAt: new Date().toISOString(),
-          details: { manual: true, group: groupKey, deleteAfter: group.deleteAfter },
+          details: {
+            manual: true,
+            group: groupKey,
+            deleteAfter: group.deleteAfter,
+            filename: result.filename,
+          },
         }),
       });
       const label = ARCHIVE_GROUPS.find((g) => g.key === groupKey)?.label ?? groupKey;
       setMessage(
-        affected > 0
-          ? `${label}: обработано ${affected} записей${group.deleteAfter ? ', исходные данные удалены' : ''}`
+        result.affected > 0
+          ? `${label}: обработано ${result.affected} записей${group.deleteAfter ? ', исходные данные удалены' : ''}${result.filename ? `, архив ${result.filename}` : ''}`
           : `${label}: нет записей старше ${group.retentionDays} дней`
       );
       refresh();
@@ -138,6 +146,33 @@ export function ArchivePage() {
       ...prev,
       [key]: { ...(prev[key] as ArchiveGroupSettings), ...patch },
     }));
+  };
+
+  const downloadLog = async (log: ArchiveLog) => {
+    const filename = log.details?.filename as string | undefined;
+    try {
+      if (filename) {
+        await downloadArchiveFile(filename);
+        return;
+      }
+      downloadJson(`archive-log-${log.id}.json`, log);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось скачать архив');
+    }
+  };
+
+  const deleteLog = async (log: ArchiveLog) => {
+    if (!confirm('Удалить запись из журнала архивирования?')) return;
+    const filename = log.details?.filename as string | undefined;
+    try {
+      if (filename) {
+        await deleteArchiveFile(filename);
+      }
+      await api(`/crm/archive-logs/${log.id}`, { method: 'DELETE' });
+      refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось удалить запись');
+    }
   };
 
   const logFilters: DataTableFilter<ArchiveLog>[] = [
@@ -186,6 +221,43 @@ export function ArchivePage() {
       sortValue: (l) => l.createdAt || '',
       render: (l) => formatDateTime(l.createdAt),
     },
+    {
+      key: 'file',
+      header: 'Файл',
+      searchValue: (l) => (l.details?.filename as string) || '',
+      render: (l) => {
+        const filename = l.details?.filename as string | undefined;
+        return filename ? <span className="font-mono text-xs">{filename}</span> : '—';
+      },
+    },
+    ...(canDelete
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            render: (l: ArchiveLog) => (
+              <div className="flex justify-end gap-1">
+                <button
+                  type="button"
+                  className="btn-secondary !px-2 !py-1"
+                  onClick={() => downloadLog(l)}
+                  title="Скачать"
+                >
+                  <Download size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary !px-2 !py-1 text-red-600"
+                  onClick={() => deleteLog(l)}
+                  title="Удалить"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ),
+          } as DataTableColumn<ArchiveLog>,
+        ]
+      : []),
   ];
 
   const logBulkActions: DataTableBulkAction<ArchiveLog>[] = [

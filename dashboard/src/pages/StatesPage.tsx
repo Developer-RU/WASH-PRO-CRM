@@ -109,6 +109,14 @@ export function StatesPage() {
         render: (r) => r.address,
       },
       {
+        key: 'postNumber',
+        header: 'Номер поста',
+        sortable: true,
+        searchValue: (r) => String(r.postNumber),
+        sortValue: (r) => r.postNumber,
+        render: (r) => <span className="font-mono">{r.postNumber}</span>,
+      },
+      {
         key: 'balance',
         header: 'Текущий баланс',
         sortable: true,
@@ -196,7 +204,7 @@ export function StatesPage() {
         data={rows || []}
         rowKey={(r) => r.postId}
         filters={filters}
-        searchPlaceholder="Поиск по адресу…"
+        searchPlaceholder="Поиск по адресу или номеру поста…"
         pageSize={20}
         bulkActions={bulkActions}
       />

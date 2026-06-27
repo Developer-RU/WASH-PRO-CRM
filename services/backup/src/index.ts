@@ -6,6 +6,8 @@ import cron from 'node-cron';
 import fetch from 'node-fetch';
 import { pino } from 'pino';
 
+import { startBackupHttpServer } from './http.js';
+
 const execAsync = promisify(exec);
 const logger = pino({ level: 'info' });
 
@@ -225,6 +227,7 @@ async function checkManualBackups(): Promise<void> {
 
 async function main(): Promise<void> {
   logger.info({ cron: CRON, retention: RETENTION }, 'Backup service starting');
+  startBackupHttpServer();
 
   if (cron.validate(CRON)) {
     cron.schedule(CRON, () => runBackup('auto'));

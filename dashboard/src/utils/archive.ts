@@ -1,7 +1,13 @@
-import { api, apiList } from '../api/client';
+import { api, apiList, getToken } from '../api/client';
 import type { ArchiveGroupSettings } from '../types';
+import { protectedLatestStatIds } from './statsAggregation';
 
 export type ArchiveGroupKey = 'cards' | 'postStates' | 'usageStats' | 'financeStats';
+
+export interface ArchiveRunResult {
+  affected: number;
+  filename?: string;
+}
 
 const GROUP_CONFIG: Record<ArchiveGroupKey, { path: string; dateField: string }> = {
   cards: { path: '/crm/cards', dateField: 'createdAt' },
@@ -21,16 +27,44 @@ function recordDate(item: Record<string, unknown>, dateField: string): Date | nu
 export async function executeArchiveGroup(
   groupKey: ArchiveGroupKey,
   group: ArchiveGroupSettings
-): Promise<number> {
+): Promise<ArchiveRunResult> {
   const config = GROUP_CONFIG[groupKey];
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - group.retentionDays);
 
   const items = await apiList<Record<string, unknown> & { id: string }>(config.path);
+  const protectedIds =
+    groupKey === 'usageStats' || groupKey === 'financeStats' || groupKey === 'postStates'
+      ? protectedLatestStatIds(groupKey, items as Array<{ id: string; postId?: string; category?: string }>)
+      : new Set<string>();
+
   const expired = items.filter((item) => {
+    if (protectedIds.has(item.id)) return false;
     const d = recordDate(item, config.dateField);
     return d != null && d.getTime() < cutoff.getTime();
   });
+
+  let filename: string | undefined;
+  if (group.saveArchive && expired.length > 0) {
+    const token = getToken();
+    const res = await fetch('/api/crm/backup-files/archives', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        groupKey,
+        policyDays: group.retentionDays,
+        records: expired,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error('Не удалось сохранить файл архива');
+    }
+    const json = (await res.json()) as { filename?: string };
+    filename = json.filename;
+  }
 
   if (group.deleteAfter) {
     for (const item of expired) {
@@ -38,5 +72,5 @@ export async function executeArchiveGroup(
     }
   }
 
-  return expired.length;
+  return { affected: expired.length, filename };
 }

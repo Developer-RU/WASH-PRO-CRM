@@ -20,6 +20,12 @@ import type { FinanceStat, Post, UsageStat } from '../types';
 
 const CATEGORY_COLORS = ['#14b8a6', '#3b82f6', '#8b5cf6'];
 
+const usageChartLabel: Record<string, string> = {
+  regular: 'Скидочные карты',
+  service: categoryLabel.service,
+  unlimited: categoryLabel.unlimited,
+};
+
 function formatUsageSeconds(seconds: number): string {
   if (seconds >= 3600) return `${(seconds / 3600).toFixed(1)} ч`;
   if (seconds >= 60) return `${Math.round(seconds / 60)} мин`;
@@ -87,7 +93,7 @@ export function DashboardCharts({
         .filter((s) => s.category === category)
         .reduce((sum, s) => sum + (s.usageTime || 0), 0);
       return {
-        name: categoryLabel[category],
+        name: usageChartLabel[category],
         value: usageTime,
         fill: CATEGORY_COLORS[i],
       };
@@ -159,7 +165,7 @@ export function DashboardCharts({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartCard title="Использование по категориям клиентов" empty={usageByCategory.length === 0}>
+        <ChartCard title="Использование типов карт" empty={usageByCategory.length === 0}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart margin={{ top: 12, right: 28, bottom: 36, left: 28 }}>
               <Pie

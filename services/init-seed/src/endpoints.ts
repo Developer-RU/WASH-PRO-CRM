@@ -385,6 +385,7 @@ export const CRM_ENDPOINTS: EndpointDef[] = [
 
   { name: 'Журнал архивирования', slug: 'crm-archive-logs-list', path: '/api/crm/archive-logs', method: 'GET', schema: [], accessType: 'authenticated', groupKey: 'backup', description: 'Журнал архивирования' },
   { name: 'Записать архивирование', slug: 'crm-archive-logs-create', path: '/api/crm/archive-logs', method: 'POST', schema: archiveLogFields, accessType: 'group', groupKey: 'backup', description: 'Записать операцию архива' },
+  { name: 'Удалить запись архива', slug: 'crm-archive-logs-delete', path: '/api/crm/archive-logs/:id', method: 'DELETE', schema: [], accessType: 'group', groupKey: 'backup', description: 'Удалить запись журнала архивирования' },
 
   { name: 'Телеметрия (внутр.)', slug: 'crm-telemetry-create', path: '/api/crm/telemetry', method: 'POST', schema: telemetryFields, accessType: 'group', groupKey: 'telemetry', description: 'Приём телеметрии от processor' },
   { name: 'Список телеметрии', slug: 'crm-telemetry-list', path: '/api/crm/telemetry', method: 'GET', schema: [], accessType: 'group', groupKey: 'telemetry', description: 'Список телеметрии' },

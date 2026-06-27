@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { HardDrive, Trash2 } from 'lucide-react';
+import { Download, HardDrive, Trash2 } from 'lucide-react';
 import { api, apiList } from '../api/client';
 import { PageHeader, Loading, Badge, statusLabel } from '../components/UI';
 import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableFilter } from '../components/DataTable';
@@ -8,6 +8,7 @@ import { usePolling } from '../hooks/usePolling';
 import { formatDateTime } from '../utils/format';
 import type { BackupRecord } from '../types';
 import { createExportBulkAction } from '../utils/export';
+import { deleteBackupFile, downloadBackupFile } from '../utils/download';
 
 export function BackupsPage() {
   const [settings, setSettings] = useState({ enabled: true, cron: '0 2 * * *', retentionCount: 7 });
@@ -63,6 +64,9 @@ export function BackupsPage() {
   const deleteBackup = async (id: string, filename: string) => {
     if (!confirm(`Удалить резервную копию «${filename}»?`)) return;
     try {
+      if (filename && !filename.startsWith('[deleted]') && !filename.endsWith('.pending')) {
+        await deleteBackupFile(filename);
+      }
       await api(`/crm/backups/${id}`, { method: 'DELETE' });
     } catch {
       await api(`/crm/backups/${id}`, {
@@ -71,6 +75,15 @@ export function BackupsPage() {
       });
     }
     refresh();
+  };
+
+  const downloadBackup = async (filename: string) => {
+    if (filename.startsWith('[deleted]') || filename.endsWith('.pending')) return;
+    try {
+      await downloadBackupFile(filename);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Не удалось скачать файл');
+    }
   };
 
   const filters: DataTableFilter<BackupRecord>[] = [
@@ -139,14 +152,26 @@ export function BackupsPage() {
       key: 'actions',
       header: '',
       render: (b) => (
-        <button
-          type="button"
-          className="btn-secondary text-red-600 !py-1 !px-2"
-          onClick={() => deleteBackup(b.id, b.filename)}
-          title="Удалить резервную копию"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex justify-end gap-1">
+          {b.status === 'completed' && !b.filename.startsWith('[deleted]') && !b.filename.endsWith('.pending') && (
+            <button
+              type="button"
+              className="btn-secondary !py-1 !px-2"
+              onClick={() => downloadBackup(b.filename)}
+              title="Скачать"
+            >
+              <Download size={14} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn-secondary text-red-600 !py-1 !px-2"
+            onClick={() => deleteBackup(b.id, b.filename)}
+            title="Удалить резервную копию"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       ),
     },
   ];
@@ -167,6 +192,9 @@ export function BackupsPage() {
       onAction: async (rows) => {
         for (const backup of rows) {
           try {
+            if (!backup.filename.startsWith('[deleted]') && !backup.filename.endsWith('.pending')) {
+              await deleteBackupFile(backup.filename);
+            }
             await api(`/crm/backups/${backup.id}`, { method: 'DELETE' });
           } catch {
             await api(`/crm/backups/${backup.id}`, {

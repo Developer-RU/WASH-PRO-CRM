@@ -1,8 +1,8 @@
 import { refId, resolveWashAddress, UNDEFINED_WASH_LABEL } from './refs';
 import type { FinanceStat, Post, PostIdRef, UsageStat, Wash, WashRef } from '../types';
 
-function recordTime(item: { recordedAt?: string; createdAt?: string }): number {
-  const raw = item.recordedAt ?? item.createdAt;
+function recordTime(item: { recordedAt?: string; lastMessageAt?: string; createdAt?: string }): number {
+  const raw = item.recordedAt ?? item.lastMessageAt ?? item.createdAt;
   if (!raw) return 0;
   const t = new Date(raw).getTime();
   return Number.isNaN(t) ? 0 : t;
@@ -33,6 +33,33 @@ export function latestUsageByPostAndCategory(stats: UsageStat[]): UsageStat[] {
     }
   }
   return [...byKey.values()];
+}
+
+/** Последняя запись на каждый пост (состояние). */
+export function latestPostStateByPost(states: Array<{ id: string; postId?: PostIdRef | string; recordedAt?: string; lastMessageAt?: string; createdAt?: string }>) {
+  const byPost = new Map<string, typeof states[0]>();
+  for (const row of states) {
+    const postKey = refId(row.postId) || row.id;
+    const prev = byPost.get(postKey);
+    if (!prev || recordTime(row) >= recordTime(prev)) {
+      byPost.set(postKey, row);
+    }
+  }
+  return [...byPost.values()];
+}
+
+/** ID записей — последний снимок на каждый пост (и категорию для usage). */
+export function protectedLatestStatIds(
+  groupKey: 'usageStats' | 'financeStats' | 'postStates',
+  items: Array<{ id: string; postId?: PostIdRef | string; category?: string }>
+): Set<string> {
+  if (groupKey === 'financeStats') {
+    return new Set(latestFinanceByPost(items as FinanceStat[]).map((r) => r.id));
+  }
+  if (groupKey === 'usageStats') {
+    return new Set(latestUsageByPostAndCategory(items as UsageStat[]).map((r) => r.id));
+  }
+  return new Set(latestPostStateByPost(items).map((r) => r.id));
 }
 
 export function resolvePostNumber(

@@ -12,7 +12,8 @@ import { useCurrency } from '../hooks/useCurrency';
 import { useDiscountTypes } from '../hooks/useDiscountTypes';
 import { bulkPut } from '../utils/bulk';
 import { createExportBulkAction } from '../utils/export';
-import { refId, resolvePostLabel } from '../utils/refs';
+import { refId } from '../utils/refs';
+import { resolvePostNumber, resolveStatWashAddress } from '../utils/statsAggregation';
 import {
   CARD_STATUS_LABELS,
   getCardStatusBadgeVariant,
@@ -39,18 +40,30 @@ const cardStatusFilter: DataTableFilter<Card> = {
 
 interface CardsColumnContext {
   currency: { code: string; symbol?: string };
-  postLabel: (c: Card) => string;
+  address: (c: Card) => string;
+  postNumber: (c: Card) => string;
   discountTypeLabel: (c: Card) => string;
 }
 
-function postColumn(ctx: CardsColumnContext): DataTableColumn<Card> {
+function addressColumn(ctx: CardsColumnContext): DataTableColumn<Card> {
   return {
-    key: 'post',
-    header: 'Пост',
+    key: 'address',
+    header: 'Адрес объекта',
     sortable: true,
-    searchValue: (c) => ctx.postLabel(c),
-    sortValue: (c) => ctx.postLabel(c),
-    render: (c) => <span className="text-sm">{ctx.postLabel(c)}</span>,
+    searchValue: (c) => ctx.address(c),
+    sortValue: (c) => ctx.address(c),
+    render: (c) => ctx.address(c),
+  };
+}
+
+function postNumberColumn(ctx: CardsColumnContext): DataTableColumn<Card> {
+  return {
+    key: 'postNumber',
+    header: 'Номер поста',
+    sortable: true,
+    searchValue: (c) => ctx.postNumber(c),
+    sortValue: (c) => Number(ctx.postNumber(c)) || 0,
+    render: (c) => <span className="font-mono">{ctx.postNumber(c)}</span>,
   };
 }
 
@@ -110,7 +123,8 @@ function discountColumns(ctx: CardsColumnContext): DataTableColumn<Card>[] {
       sortValue: (c) => c.discount,
       render: (c) => formatMoney(c.discount, ctx.currency),
     },
-    postColumn(ctx),
+    addressColumn(ctx),
+    postNumberColumn(ctx),
     statusColumn(),
     datetimeColumn(),
   ];
@@ -140,7 +154,8 @@ function periodColumns(ctx: CardsColumnContext): DataTableColumn<Card>[] {
       sortValue: (c) => c.validUntil || '',
       render: (c) => (c.validUntil ? new Date(c.validUntil).toLocaleString('ru') : '—'),
     },
-    postColumn(ctx),
+    addressColumn(ctx),
+    postNumberColumn(ctx),
     statusColumn(),
     datetimeColumn(),
   ];
@@ -222,12 +237,14 @@ function CardsTable({
     [data?.washes]
   );
 
-  const postLabel = useCallback(
-    (c: Card) => {
-      const populatedPost = typeof c.postId === 'object' ? c.postId : postById.get(refId(c.postId));
-      return resolvePostLabel(populatedPost || c.postId, postById, washById);
-    },
+  const address = useCallback(
+    (c: Card) => resolveStatWashAddress(c.washId ?? '', c.postId, postById, washById),
     [postById, washById]
+  );
+
+  const postNumber = useCallback(
+    (c: Card) => resolvePostNumber(c.postId, postById),
+    [postById]
   );
 
   const filtered = useMemo(
@@ -238,10 +255,11 @@ function CardsTable({
   const columnCtx = useMemo(
     (): CardsColumnContext => ({
       currency,
-      postLabel,
+      address,
+      postNumber,
       discountTypeLabel: (c) => discountTypeLabel(c.discountType),
     }),
-    [currency, postLabel, discountTypeLabel]
+    [currency, address, postNumber, discountTypeLabel]
   );
 
   const columns = useMemo(
@@ -256,7 +274,8 @@ function CardsTable({
             { header: 'Номер карты', value: (c) => c.cardNumber },
             { header: 'Начало', value: (c) => c.validFrom || '' },
             { header: 'Окончание', value: (c) => c.validUntil || '' },
-            { header: 'Пост', value: (c) => postLabel(c) },
+            { header: 'Адрес объекта', value: (c) => address(c) },
+            { header: 'Номер поста', value: (c) => postNumber(c) },
             { header: 'Статус', value: (c) => getCardStatusLabel(c.status) },
             { header: 'Дата и время', value: (c) => c.createdAt || '' },
           ]
@@ -265,7 +284,8 @@ function CardsTable({
             { header: 'Тип скидки', value: (c) => discountTypeLabel(c.discountType) },
             { header: 'Баланс', value: (c) => String(c.balance) },
             { header: 'Сумма скидки', value: (c) => String(c.discount) },
-            { header: 'Пост', value: (c) => postLabel(c) },
+            { header: 'Адрес объекта', value: (c) => address(c) },
+            { header: 'Номер поста', value: (c) => postNumber(c) },
             { header: 'Статус', value: (c) => getCardStatusLabel(c.status) },
             { header: 'Дата и время', value: (c) => c.createdAt || '' },
           ]),
@@ -290,7 +310,7 @@ function CardsTable({
     }
 
     return actions;
-  }, [canEdit, cardType, period, postLabel, discountTypeLabel, refresh]);
+  }, [canEdit, cardType, period, address, postNumber, discountTypeLabel, refresh]);
 
   if (loading && !data) return <Loading />;
 
