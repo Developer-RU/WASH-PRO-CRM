@@ -38,7 +38,9 @@ Open http://localhost:5173 — Vite proxies `/api` to the backend on port 3001.
 
 ### UI themes
 
-Light and dark themes are available. Toggle in the admin header; preference is stored in `localStorage` under key `theme`.
+Four themes: **Dark**, **Light**, **Ocean**, **Forest**. Click the **palette** icon in the header to cycle themes (or use Settings → Display for descriptions). Preference is stored in `localStorage` under key `theme`.
+
+Details: [UI Themes]({{ '/themes/' | relative_url }})
 
 ## Scripts
 
@@ -104,7 +106,7 @@ See the full guide: [Testing]({{ '/testing/' | relative_url }})
 
 ```bash
 cd backend
-npm test              # unit tests (30 tests, no MongoDB required)
+npm test              # unit tests (37 tests, no MongoDB required)
 npm run test:load     # load test (requires running backend)
 ```
 

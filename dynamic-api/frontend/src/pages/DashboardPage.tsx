@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   Users, Globe, Activity, AlertTriangle, Clock, Webhook, Key, Bot,
@@ -7,11 +7,12 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { api, UnauthorizedError } from '../services/api';
+import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { DashboardStats } from '../types';
 import { StatCard, PageHeader, LoadingSpinner } from '../components/UI';
 import { useTheme } from '../context/ThemeContext';
+import { LIVE_INTERVAL_DASHBOARD_MS } from '../constants/live';
+import { usePolling } from '../hooks/usePolling';
 import type { Theme } from '../themes';
 
 const chartThemes: Record<Theme, { grid: string; tick: string; tooltip: Record<string, string | number> }> = {
@@ -50,27 +51,21 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const chartTheme = chartThemes[theme];
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    api.getDashboardStats()
-      .then(setStats)
-      .catch((err) => {
-        if (err instanceof UnauthorizedError) return;
-        console.error(err);
-        setLoadError(true);
-      })
-      .finally(() => setLoading(false));
+  const fetchStats = useCallback(async () => {
+    return api.getDashboardStats();
   }, []);
 
+  const { data: stats, loading, error } = usePolling(fetchStats, [], {
+    intervalMs: LIVE_INTERVAL_DASHBOARD_MS,
+  });
+
   if (!user || !api.isAuthenticated) return <Navigate to="/login" replace />;
-  if (loading) return <LoadingSpinner />;
+  if (loading && !stats) return <LoadingSpinner />;
   if (!stats) {
     return (
       <div className="py-12 text-center text-dark-muted">
-        {loadError ? 'Failed to load dashboard. Please try again.' : 'Failed to load dashboard'}
+        {error ? 'Failed to load dashboard. Please try again.' : 'Failed to load dashboard'}
       </div>
     );
   }

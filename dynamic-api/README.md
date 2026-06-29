@@ -6,7 +6,7 @@
 
 **Open-source platform for creating, managing, and testing REST APIs without writing backend code.**
 
-[![Release](https://img.shields.io/github/v/release/Dynamic-API-Platform/Dynamic-API-Platform?label=v1.5.11)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.11)
+[![Release](https://img.shields.io/github/v/release/Dynamic-API-Platform/Dynamic-API-Platform?label=v1.5.12)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.12)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&logoColor=white)](k8s/)
@@ -110,20 +110,22 @@ Regenerate from a running instance: `npm run screenshots`
 ### Security
 - JWT + refresh tokens, RBAC (5 system groups + custom)
 - Network access rules, rate limiting, login lockout, audit logs
-- Helmet, CORS, CSRF, bcrypt
+- Helmet (HSTS in production), CORS, CSRF, bcrypt
+- Update settings: validated `githubRepo` format (`owner/repo` only, v1.5.10+)
 
 ### Admin Panel
-- **Dashboard** — automation KPIs, request/error charts, health widget
+- **Dashboard** — automation KPIs, request/error charts, health widget; **Live** auto-refresh in header
 - Endpoints, groups, **API Schema** (ER diagram), **Database Explorer**
 - Users, groups, **audit logs** with source filters
 - **Four UI themes** — Dark, Light, Ocean, Forest — [docs/themes.md](docs/themes.md)
+- **Live header badge** — polling on Dashboard/System, static data elsewhere — [docs/live-ui.md](docs/live-ui.md)
 - System monitoring, settings (export/import)
 
 ### DevOps & software updates
 - Docker Compose with **in-app updates enabled by default** (local PC or VPS)
 - **Software updates** — GitHub release checks, **Update now**, scheduled auto-update, rollback — [docs/updates.md](docs/updates.md)
 - **MongoDB replica set**, **Kubernetes** manifests
-- Vitest unit tests (30), load test, GitHub Actions CI
+- Vitest unit tests (37), load test, GitHub Actions CI
 - Health checks, persistent volumes, nginx API proxy
 - [GitHub Pages](https://dynamic-api-platform.github.io/Dynamic-API-Platform/) docs + [Wiki](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/wiki)
 
@@ -184,7 +186,7 @@ See [Development Guide](docs/development.md).
 
 ```bash
 cd backend
-npm test                 # Vitest — 30 tests, no MongoDB required
+npm test                 # Vitest — 37 tests, no MongoDB required
 npm run test:load        # autocannon — backend must be running
 ```
 
@@ -207,9 +209,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.
 
 ## Changelog
 
-**[v1.5.11](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.11)** (latest) — fix in-app Docker update host bind mounts.
+**[v1.5.12](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.12)** (latest) — Live header badge (auto-refresh + static data mode).
 
-**[v1.5.8](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.8)** — fix Software Updates status display (real GitHub latest, Up to date).
+**[v1.5.11](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.11)** — fix in-app Docker update host bind mounts.
+
+**[v1.5.10](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.10)** — security: `githubRepo` validation, HSTS, Referrer-Policy.
+
+**[v1.5.9](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.9)** — Ocean & Forest UI themes.
 
 **[v1.5.7](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.7)** — data retention (TTL), editable endpoint path.
 

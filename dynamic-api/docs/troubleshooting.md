@@ -185,6 +185,28 @@ cd frontend && rm -rf dist node_modules && npm install && npm run build
 
 ---
 
+## Software updates
+
+### Services won't start after in-app update
+
+**Symptom:** `mongo-init`, backend, or frontend fail after **Update now**; logs show `mounts denied: /deploy/...`.
+
+**Cause (fixed in v1.5.11):** The updater ran `docker compose` from inside a container where `${PWD}` was `/deploy` instead of the real host path.
+
+**Fix:**
+
+1. Upgrade to **v1.5.11+** and retry in-app update, **or**
+2. Recover manually from the project directory on the host:
+
+```bash
+cd /path/to/Dynamic-API-Platform
+docker compose -f docker-compose.replica.yml up -d --build
+```
+
+See [Software Updates](updates.md) for `DAP_HOST_PROJECT_ROOT` details.
+
+---
+
 ## Getting help
 
 1. Check [FAQ](faq.md)

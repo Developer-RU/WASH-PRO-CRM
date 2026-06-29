@@ -52,9 +52,12 @@ npm test && npm run build
 | `src/utils/schema.test.ts` | Data sanitization | `pickSchemaData` strips extra fields; `findUnknownFields` detects nested unknown keys |
 | `src/utils/networkAccess.test.ts` | Security | Domain wildcards, CIDR matching, deny/allow rules, group+endpoint rule merge, invalid input rejection |
 | `src/utils/auditLog.test.ts` | Logging | Log source resolution (MCP, cron, API key), compact log entries, valid ObjectId for `userId` |
+| `src/utils/semver.test.ts` | Versioning | Semver compare for update checks |
+| `src/utils/data-retention.test.ts` | Data lifecycle | TTL / retention helpers |
+| `src/utils/github-repo.test.ts` | Security | `githubRepo` setting validation (`owner/repo`) |
 | `src/services/mcp.service.test.ts` | MCP | Tool name generation from method + path |
 
-**Current count:** 30 tests across 6 files.
+**Current count:** 37 tests across 8 files.
 
 ### What unit tests do *not* cover
 

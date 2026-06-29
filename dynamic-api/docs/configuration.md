@@ -28,10 +28,11 @@ Copy `.env.example` to `.env` for Docker Compose variable substitution.
 | `ADMIN_PASSWORD` | `Admin123!` | Seed admin password |
 | `VITE_API_URL` | `""` | Frontend API base (build-time) |
 | `APP_VERSION` | `package.json` | Installed version for update checks |
-| `UPDATE_EXECUTOR_ENABLED` | `false` | Enable in-app apply/rollback |
+| `UPDATE_EXECUTOR_ENABLED` | `true` in Docker Compose | Enable in-app apply/rollback |
 | `UPDATE_DEPLOY_MODE` | `docker` | `docker`, `docker-replica`, `native` |
 | `UPDATE_COMPOSE_FILE` | `/deploy/docker-compose.yml` | Compose file in project mount |
-| `UPDATE_PROJECT_ROOT` | `/deploy` | Host project path in container |
+| `UPDATE_PROJECT_ROOT` | `/deploy` | Project root inside container |
+| `DAP_HOST_PROJECT_ROOT` | `${PWD}` | Host path for compose bind mounts (v1.5.11+) |
 | `UPDATE_DATA_DIR` | `/app/data/updates` | Update job data directory |
 | `UPDATE_HEALTH_URL` | `http://localhost:3001/api/health` | Post-update health probe |
 | `UPDATE_RUNNER_IMAGE` | `docker:26-cli` | Detached updater container image |
@@ -91,7 +92,7 @@ Details: [UI Themes]({{ '/themes/' | relative_url }})
 
 ### Software updates
 
-Configured via separate API (`/api/updates/settings`). See [Software Updates]({{ '/updates/' | relative_url }}).
+Configured via separate API (`/api/updates/settings`). See [Software Updates]({{ '/updates/' | relative_url }}). The `githubRepo` field accepts `owner/repo` only (validated since v1.5.10).
 
 ---
 

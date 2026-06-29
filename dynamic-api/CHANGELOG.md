@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Multi-tenant workspace support
 
+## [1.5.12] - 2026-06-25
+
+### Added
+- **Live UI** — header badge on every admin page: auto-refresh on **Dashboard** (15 s) and **System** (10 s); **статические данные** on all other pages — [live-ui.md](docs/live-ui.md)
+
+### Changed
+- **Documentation** — GitHub Pages, wiki mirror, README, and org profile synced (Live UI, updates, themes, 37 unit tests, security v1.5.10)
+
 ## [1.5.11] - 2026-06-25
 
 ### Fixed
@@ -269,6 +277,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Default endpoint groups
 - CRM, SHOP, DEVICES
 
+[1.5.12]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.12
 [1.5.11]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.11
 [1.5.10]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.10
 [1.5.9]: https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.9

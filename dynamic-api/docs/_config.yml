@@ -54,6 +54,8 @@ nav:
     url: /configuration/
   - title: UI Themes
     url: /themes/
+  - title: Live UI
+    url: /live-ui/
   - title: Software Updates
     url: /updates/
   - title: Development

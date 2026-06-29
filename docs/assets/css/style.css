@@ -114,7 +114,7 @@ a:hover { color: var(--primary-hover); text-decoration: underline; }
   margin-top: auto;
 }
 
-.sidebar-resources-title {
+.sidebar-issues-title {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;

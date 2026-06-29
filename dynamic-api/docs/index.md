@@ -20,13 +20,16 @@ Ideal when you need APIs that evolve quickly: internal admin backends, MVPs, int
 
 | Update | Summary |
 |--------|---------|
+| **v1.5.12 — Live UI** | Header **Live** badge: auto-refresh on Dashboard/System, **статические данные** elsewhere — [Live UI]({{ '/live-ui/' | relative_url }}) |
+| **v1.5.11 — Docker update fix** | In-app update uses host path `DAP_HOST_PROJECT_ROOT` for compose bind mounts (macOS / updater container) — [Updates]({{ '/updates/' | relative_url }}) |
+| **v1.5.10 — Security** | `githubRepo` validation, HSTS, Referrer-Policy — [Updates]({{ '/updates/' | relative_url }}) |
 | **v1.5.9 — UI themes** | **Ocean** & **Forest** themes + palette switcher — [UI Themes]({{ '/themes/' | relative_url }}) |
 | **v1.5.8 — Update status** | Correct **Latest on GitHub** and **Up to date** in Settings — [Updates]({{ '/updates/' | relative_url }}) |
 | **v1.5.7 — Endpoint data lifecycle** | Per-endpoint **data retention** (days, or forever); **editable path** after creation — [Dynamic Engine]({{ '/dynamic-api-engine/' | relative_url }}) |
 | **v1.5.5 — Update reliability** | Stale job cleanup, **Cancel** in Settings, bash updater fix — [Updates]({{ '/updates/' | relative_url }}) |
 | **v1.5 — Software updates** | In-app updates from GitHub Releases, **Update now**, auto-update in Docker, rollback — [Updates]({{ '/updates/' | relative_url }}) |
 | **v1.4 — Deployment** | [Three variants]({{ '/deployment-variants/' | relative_url }}): Docker single, MongoDB replica set, Kubernetes |
-| **v1.4 — Testing** | Vitest (30 tests), load test, CI — [Testing]({{ '/testing/' | relative_url }}) |
+| **v1.4 — Testing** | Vitest (37 tests), load test, CI — [Testing]({{ '/testing/' | relative_url }}) |
 | **v1.4 — Observability** | Dashboard automation KPIs, charts, health widget; audit log `source` field |
 | **v1.3 — Cron** | Scheduled jobs at `/cron` |
 | **v1.3 — Webhooks** | Outbound events at `/webhooks` |
@@ -47,8 +50,7 @@ Details: [Automation & Integrations]({{ '/automation/' | relative_url }}) · [Ch
   <a href="{{ '/architecture/' | relative_url }}">Architecture</a> ·
   <a href="{{ '/automation/' | relative_url }}">Automation</a> ·
   <a href="{{ '/api-reference/' | relative_url }}">API Reference</a> ·
-  <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform">GitHub</a> ·
-  <a href="https://github.com/Developer-RU">Developer</a>
+  <a href="https://github.com/Dynamic-API-Platform/Dynamic-API-Platform">GitHub</a>
 </p>
 
 ## Features
@@ -59,7 +61,7 @@ Details: [Automation & Integrations]({{ '/automation/' | relative_url }}) · [Ch
 | **Automation** | **Cron scheduler**, **outbound webhooks**, **JavaScript handlers**, **MCP server** for AI agents, **API keys** for M2M auth |
 | **OpenAPI** | Auto-generated spec, Swagger UI, embedded **API Docs** in admin panel |
 | **Security** | JWT auth with refresh, RBAC, **API keys**, **network access rules**, rate limiting, login lockout, audit logs, Helmet, CORS |
-| **Admin Panel** | Dashboard, endpoint editor, **Handler tab**, **API Schema (ER diagram)**, **API Docs**, **Cron / Webhooks / API Keys / MCP Server**, linked-endpoint picker, **Network Access** tab, **Database Explorer (raw JSON)**, API tester, users & groups, **project export/import**, scrollable sidebar |
+| **Admin Panel** | Dashboard, endpoint editor, **Handler tab**, **API Schema (ER diagram)**, **API Docs**, **Cron / Webhooks / API Keys / MCP Server**, linked-endpoint picker, **Network Access** tab, **Database Explorer (raw JSON)**, API tester, users & groups, **project export/import**, scrollable sidebar, **Live header badge** |
 | **DevOps** | Docker Compose (**in-app software updates**), **MongoDB replica set**, **Kubernetes**, health checks, CI/tests |
 | **Software updates** | GitHub release checks, notification banner, **Update now**, scheduled auto-update, rollback — [Updates]({{ '/updates/' | relative_url }}) |
 | **Search** | Full-text search on all data list pages (client + server side) |
@@ -224,6 +226,8 @@ docker compose up -d
 | [Development]({{ '/development/' | relative_url }}) | Local dev setup, project conventions |
 | [Testing]({{ '/testing/' | relative_url }}) | Unit tests, load tests, CI |
 | [Screenshots]({{ '/screenshots/' | relative_url }}) | UI gallery |
+| [UI Themes]({{ '/themes/' | relative_url }}) | Dark, Light, Ocean, Forest color schemes |
+| [Live UI]({{ '/live-ui/' | relative_url }}) | Header Live badge — polling vs static data |
 | [FAQ]({{ '/faq/' | relative_url }}) | Common questions |
 | [Troubleshooting]({{ '/troubleshooting/' | relative_url }}) | Known issues and fixes |
 

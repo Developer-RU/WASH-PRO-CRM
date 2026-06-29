@@ -142,7 +142,11 @@ Yes. **API → API Schema** (`/api-schema`) shows a read-only ER-style diagram: 
 
 ### Is there a light theme?
 
-Yes. Use the **sun/moon** button in the top header (or the link on the login page) to switch between **light** (slate + cyan, CRM-style) and **dark** themes. Preference is saved in `localStorage`.
+Yes. The admin panel has **four themes**: Dark, Light, Ocean, and Forest. Click the **palette** icon in the header to cycle through them (or open **Settings → Display** for descriptions). Preference is saved in `localStorage`. See [UI Themes]({{ '/themes/' | relative_url }}).
+
+### What does the Live badge in the header mean?
+
+A green **Live** badge shows whether the current page auto-refreshes. **Dashboard** and **System** poll every 10–15 seconds (`каждые N сек · time`). Other pages show **статические данные** — data loads when you open the page or click Refresh. See [Live UI]({{ '/live-ui/' | relative_url }}).
 
 ---
 

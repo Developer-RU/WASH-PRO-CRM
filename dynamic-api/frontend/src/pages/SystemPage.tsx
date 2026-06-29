@@ -1,13 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Server, Cpu, HardDrive, MemoryStick, FolderOpen, Network,
   Clock, Monitor, RefreshCw,
 } from 'lucide-react';
 import { api } from '../services/api';
-import { SystemInfo } from '../types';
 import { formatBytes, formatUptime } from '../utils/format';
 import { matchesSearch } from '../utils/search';
 import { PageHeader, LoadingSpinner, SearchInput } from '../components/UI';
+import { LIVE_INTERVAL_SYSTEM_MS } from '../constants/live';
+import { usePolling } from '../hooks/usePolling';
 
 function InfoCard({ icon: Icon, label, value, sub, color = '#3b82f6' }: {
   icon: typeof Server; label: string; value: string; sub?: string; color?: string;
@@ -38,19 +39,13 @@ function ProgressBar({ percent, color }: { percent: number; color: string }) {
 }
 
 export default function SystemPage() {
-  const [info, setInfo] = useState<SystemInfo | null>(null);
-  const [loading, setLoading] = useState(true);
   const [networkSearch, setNetworkSearch] = useState('');
 
-  const load = () => {
-    setLoading(true);
-    api.getSystemInfo()
-      .then(setInfo)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  };
+  const fetchInfo = useCallback(async () => api.getSystemInfo(), []);
 
-  useEffect(() => { load(); }, []);
+  const { data: info, loading, refresh } = usePolling(fetchInfo, [], {
+    intervalMs: LIVE_INTERVAL_SYSTEM_MS,
+  });
 
   const filteredInterfaces = useMemo(() => {
     if (!info) return [];
@@ -59,7 +54,7 @@ export default function SystemPage() {
     );
   }, [info, networkSearch]);
 
-  if (loading) return <LoadingSpinner />;
+  if (loading && !info) return <LoadingSpinner />;
   if (!info) return <div className="text-center text-dark-muted py-12">Failed to load system info</div>;
 
   return (
@@ -68,7 +63,7 @@ export default function SystemPage() {
         title="System"
         subtitle="Server resources and environment information"
         action={
-          <button className="btn-secondary" onClick={load}>
+          <button className="btn-secondary" onClick={refresh}>
             <RefreshCw className="w-4 h-4" /> Refresh
           </button>
         }

@@ -34,7 +34,10 @@ Yes — [Database Explorer](Database-Explorer) (`/database`, requires `manage_us
 JSON-RPC at `POST /api/mcp` exposes dynamic endpoints as AI agent tools. Admin UI at `/mcp`.
 
 **Q: Light or dark theme?**  
-Both. Toggle in the header or on the login page.
+Four themes: Dark, Light, Ocean, Forest. Click the **palette** icon in the header. See [Themes](Themes).
+
+**Q: What is the Live badge in the header?**  
+**Dashboard** and **System** auto-refresh (shows interval and time). Other pages show **статические данные**. See [Live UI](Live-UI).
 
 **Q: How to reset database?**  
 `docker compose down -v && docker compose up -d` (**deletes all data**). Replica set: `docker compose -f docker-compose.replica.yml down -v`.

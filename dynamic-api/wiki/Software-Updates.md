@@ -13,6 +13,8 @@
 - Stale jobs (target older than installed version) auto-failed on startup
 - **Up to date** / **Update available** status with correct GitHub latest (v1.5.8+)
 - Automatic rollback if health check fails after deploy
+- **v1.5.11:** `DAP_HOST_PROJECT_ROOT` — correct host bind mounts when updater runs in container (macOS)
+- **v1.5.10:** `githubRepo` validation (`owner/repo` only), HSTS, Referrer-Policy
 
 ## Out of the box
 
@@ -29,6 +31,10 @@ Open **Settings → Software Updates** — status should show **Auto-update: Rea
 ## System page
 
 **System** shows installed version (`APP_VERSION`), deploy mode, and auto-update readiness.
+
+## Troubleshooting
+
+If backend/frontend fail after update with `mounts denied: /deploy/...`, upgrade to **v1.5.11+** or run `docker compose up -d --build` from the project root on the host.
 
 ## Full documentation
 

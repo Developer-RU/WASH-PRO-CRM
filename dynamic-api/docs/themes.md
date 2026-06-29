@@ -38,6 +38,8 @@ Bright surfaces for **daytime** or well-lit offices. Same layout, higher backgro
 
 - Themes use CSS variables (`--dap-bg`, `--dap-card`, `--dap-brand-*`) on `html[data-theme="…"]`
 - **Light** disables Tailwind `dark:` mode; **Dark**, **Ocean**, and **Forest** use dark-mode component styles
+
+See also: [Live UI]({{ '/live-ui/' | relative_url }}) — header badge on every admin page.
 - Dashboard charts adapt grid and tooltip colors per theme
 - Default theme in **Settings** is stored server-side; active theme is per browser
 

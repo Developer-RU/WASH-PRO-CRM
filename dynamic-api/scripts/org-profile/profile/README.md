@@ -6,7 +6,7 @@
 
 **Open-source platform for creating, managing, and testing REST APIs without writing backend code.**
 
-[![Release](https://img.shields.io/github/v/release/Dynamic-API-Platform/Dynamic-API-Platform?label=v1.5.9)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.9)
+[![Release](https://img.shields.io/github/v/release/Dynamic-API-Platform/Dynamic-API-Platform?label=v1.5.12)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/releases/tag/v1.5.12)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/blob/main/docker-compose.yml)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&logoColor=white)](https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/tree/main/k8s)
@@ -76,10 +76,11 @@ docker compose up -d
 | **Network access** | Restrict callers by domain and IP/CIDR pools |
 | **Database Explorer** | Raw MongoDB admin UI for power users |
 | **RBAC** | Permission-based groups for users and management API |
-| **Software updates** | In-app updates from GitHub Releases (Docker, out of the box) |
+| **Software updates** | In-app updates from GitHub Releases (Docker, out of the box; v1.5.11 host-path fix) |
 | **Deployment** | Docker, MongoDB replica set, Kubernetes |
-| **Testing** | Vitest (30 tests), load test, GitHub Actions CI |
+| **Testing** | Vitest (37 tests), load test, GitHub Actions CI |
 | **UI themes** | Dark, Light, Ocean, Forest color schemes |
+| **Live UI** | Header badge — auto-refresh or static data pages |
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Dynamic-API-Platform/Dynamic-API-Platform/main/docs/screenshots/dashboard.png" alt="Dashboard" width="720" />
@@ -113,6 +114,7 @@ docker compose up -d
 | Testing | https://dynamic-api-platform.github.io/Dynamic-API-Platform/testing/ |
 | Kubernetes | https://dynamic-api-platform.github.io/Dynamic-API-Platform/kubernetes/ |
 | Software Updates | https://dynamic-api-platform.github.io/Dynamic-API-Platform/updates/ |
+| Live UI | https://dynamic-api-platform.github.io/Dynamic-API-Platform/live-ui/ |
 | Wiki | https://github.com/Dynamic-API-Platform/Dynamic-API-Platform/wiki |
 
 ---
@@ -136,6 +138,6 @@ Projects under this organization are open source under the **[Apache License 2.0
 
 **Build APIs at the speed of configuration.**
 
-<sub>Maintained by the Dynamic API Platform community · <a href="https://github.com/Developer-RU">Developer</a></sub>
+<sub>Maintained by the Dynamic API Platform community · <a href="https://github.com/Dynamic-API-Platform">Dynamic-API-Platform</a></sub>
 
 </div>

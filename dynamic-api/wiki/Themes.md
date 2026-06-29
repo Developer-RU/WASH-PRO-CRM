@@ -2,6 +2,8 @@
 
 Full guide: [UI Themes](https://dynamic-api-platform.github.io/Dynamic-API-Platform/themes/)
 
+Four themes (v1.5.9+): Dark, Light, Ocean, Forest. Header **Live** badge: [Live UI](Live-UI).
+
 ## Themes
 
 | Theme | Description |

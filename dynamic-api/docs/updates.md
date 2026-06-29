@@ -68,17 +68,20 @@ environment:
   UPDATE_DEPLOY_MODE: docker
   UPDATE_COMPOSE_FILE: /deploy/docker-compose.yml
   UPDATE_PROJECT_ROOT: /deploy
-  UPDATE_HOST_PROJECT_ROOT: ${PWD}
+  UPDATE_HOST_PROJECT_ROOT: ${DAP_HOST_PROJECT_ROOT:-${PWD}}
+  DAP_HOST_PROJECT_ROOT: ${DAP_HOST_PROJECT_ROOT:-${PWD}}
   UPDATE_DATA_VOLUME: dap_update_data
   UPDATE_DOCKER_NETWORK: dap_default
   UPDATE_HEALTH_URL: http://backend:3001/api/health
 volumes:
   - update_data:/app/data/updates
   - /var/run/docker.sock:/var/run/docker.sock
-  - ${PWD}:/deploy
+  - ${DAP_HOST_PROJECT_ROOT:-${PWD}}:/deploy
 ```
 
-Replica stack: use `docker-compose.replica.yml` (`UPDATE_DEPLOY_MODE=docker-replica`, network `dap-replica-network`).
+Replica stack: use `docker-compose.replica.yml` (`UPDATE_DEPLOY_MODE=docker-replica`, network `dap-replica-network`, volume `dap_update_data_replica`).
+
+> **v1.5.11+:** When the updater runs inside a container, `docker compose` must bind-mount files from the **real host path**, not `/deploy`. The updater sets `DAP_HOST_PROJECT_ROOT` automatically; manual `docker compose` from the project directory uses `${PWD}`.
 
 ### Verify
 
@@ -91,10 +94,12 @@ Use **Check now** to query GitHub, then **Update to vX.Y.Z** to test.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `APP_VERSION` | from `package.json` | Installed version reported to UI |
-| `UPDATE_EXECUTOR_ENABLED` | `false` | Allow apply/rollback from UI |
+| `UPDATE_EXECUTOR_ENABLED` | `true` in Docker Compose | Allow apply/rollback from UI |
 | `UPDATE_DEPLOY_MODE` | `docker` | `docker`, `docker-replica`, or `native` |
 | `UPDATE_COMPOSE_FILE` | `/deploy/docker-compose.yml` | Compose file path inside mount |
-| `UPDATE_PROJECT_ROOT` | `/deploy` | Git repo root on host |
+| `UPDATE_PROJECT_ROOT` | `/deploy` | Project root inside updater container |
+| `UPDATE_HOST_PROJECT_ROOT` | host path | Real host directory (passed to updater) |
+| `DAP_HOST_PROJECT_ROOT` | `${PWD}` or env | Host path for compose bind mounts (v1.5.11+) |
 | `UPDATE_DATA_DIR` | `/app/data/updates` | Job manifests, progress, logs |
 | `UPDATE_HEALTH_URL` | `http://localhost:3001/api/health` | URL polled after deploy |
 | `UPDATE_RUNNER_IMAGE` | `docker:26-cli` | Image for detached updater |
@@ -143,6 +148,14 @@ All routes require authentication and `manage_users` + `manage_api`.
 | `GET` | `/api/updates/jobs` | Recent jobs |
 | `POST` | `/api/updates/jobs/:id/rollback` | Manual rollback |
 
+## Security (v1.5.10+)
+
+| Control | Description |
+|---------|-------------|
+| **githubRepo validation** | Settings value must be `owner/repo` only — blocks path-like or malformed values before GitHub API calls |
+| **HSTS** | Enabled in production via Helmet |
+| **Referrer-Policy** | `strict-origin-when-cross-origin` on API responses |
+
 ## Kubernetes
 
 In-cluster auto-update is not enabled by default. Use your GitOps / CI pipeline (see [Kubernetes]({{ '/kubernetes/' | relative_url }})) to roll out new images. The check-and-notify UI still works if the backend can reach `api.github.com`.
@@ -157,5 +170,7 @@ In-cluster auto-update is not enabled by default. Use your GitOps / CI pipeline 
 | Stuck update banner | Stale job in DB — restart backend (auto-reconcile) or **Cancel** in Settings |
 | **Latest on GitHub** shows old version | Click **Check now** — v1.5.8+ stores real GitHub latest; manual deploys auto-refresh cache |
 | Rollback after update | Previous git ref restored; inspect `update_data` logs |
+| **Backend/frontend won't start after in-app update** (v1.5.11 fix) | Updater used `/deploy` as host path for bind mounts — upgrade to **v1.5.11+** or run `docker compose up -d --build` from project root on host |
+| `mounts denied: /deploy/...` on macOS | Same as above — ensure `DAP_HOST_PROJECT_ROOT` points to real host directory |
 
 Logs: `{UPDATE_DATA_DIR}/update-{jobId}.log`
